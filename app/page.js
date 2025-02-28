@@ -11,20 +11,51 @@ export default function Home() {
   const [history, setHistory] = useState([]);
   const [marriagePrompt, setMarriagePrompt] = useState('');
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+  const handleSignInWithGoogle = async (response) => {
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: response.credential,
     });
 
-    // Listen for auth changes
+    if (error) {
+      console.error('Sign in error:', error);
+    } else {
+      console.log('Signed in user:', data);
+    }
+  };
+
+  useEffect(() => {
+    console.log('Home component mounted');
+    let mounted = true;
+
+    async function getInitialSession() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (mounted) {
+          console.log('Initial session:', session);
+          setSession(session);
+        }
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error getting session:', error);
+      }
+    }
+
+    getInitialSession();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+      if (mounted) {
+        console.log('Auth state changed:', _event, session);
+        setSession(session);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Only fetch data if we have a session
