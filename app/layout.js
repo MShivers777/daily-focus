@@ -1,3 +1,6 @@
+import './globals.css';
+import DarkModeToggle from '../components/DarkModeToggle';
+
 export const metadata = {
   title: 'Daily Focus Tracker',
   description: 'Track your daily fitness and relationship goals',
@@ -13,8 +16,21 @@ export default function RootLayout({ children }) {
           defer
           importance="high"
         />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            if (localStorage.getItem('darkMode') === 'true' || 
+                (!localStorage.getItem('darkMode') && 
+                window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+              document.documentElement.classList.add('dark')
+            }
+          `
+        }} />
       </head>
-      <body className="bg-gray-50 min-h-screen">
+      <body className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+        <div className="fixed top-4 right-4 z-50">
+          <DarkModeToggle />
+        </div>
         <main className="container mx-auto py-8">
           {children}
         </main>
