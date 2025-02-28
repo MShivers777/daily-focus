@@ -10,49 +10,32 @@ export default function AuthComponent() {
 
   useEffect(() => {
     setIsClient(true);
-    console.log('Auth component mounted');
     
     const checkGoogleScriptLoaded = () => {
       const scriptLoaded = typeof window !== 'undefined' && 
         window.google?.accounts?.id;
 
-      console.log('Checking Google script status:', {
-        hasWindow: typeof window !== 'undefined',
-        hasGoogle: typeof window !== 'undefined' && !!window.google,
-        hasAccounts: scriptLoaded
-      });
-
       if (scriptLoaded) {
-        console.log('Google script fully loaded');
         setIsLoaded(true);
         initializeGoogleSignIn();
       } else {
-        console.log('Waiting for Google script...');
         setTimeout(checkGoogleScriptLoaded, 100);
       }
     };
 
     const initializeGoogleSignIn = () => {
       try {
-        if (!buttonRef.current) {
-          console.error('Button container not found');
-          return;
-        }
-
-        console.log('Starting Google Sign-In initialization');
+        if (!buttonRef.current) return;
         
         window.oauth_callback = async function(response) {
-          console.log('OAuth callback received:', response);
           try {
-            const { data, error } = await supabase.auth.signInWithIdToken({
+            const { error } = await supabase.auth.signInWithIdToken({
               provider: 'google',
               token: response.credential,
             });
             
             if (error) throw error;
-            console.log('Signed in successfully:', data);
           } catch (error) {
-            console.error('Google sign in error:', error);
             setError(error.message);
           }
         };
@@ -64,7 +47,6 @@ export default function AuthComponent() {
           context: 'signin'
         });
 
-        console.log('Attempting to render button in:', buttonRef.current);
         window.google.accounts.id.renderButton(
           buttonRef.current,
           {
@@ -77,7 +59,6 @@ export default function AuthComponent() {
           }
         );
       } catch (err) {
-        console.error('Error in Google Sign-In initialization:', err);
         setError(err.message);
       }
     };

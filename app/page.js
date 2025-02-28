@@ -10,6 +10,12 @@ export default function Home() {
   const [cardioLoad, setCardioLoad] = useState('');
   const [history, setHistory] = useState([]);
   const [marriagePrompt, setMarriagePrompt] = useState('');
+  const [metrics, setMetrics] = useState({
+    sevenDayStrength: 0,
+    sevenDayCardio: 0,
+    thirtyOneDayStrength: 0,
+    thirtyOneDayCardio: 0,
+  });
 
   const handleSignInWithGoogle = async (response) => {
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -25,14 +31,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-    console.log('Home component mounted');
     let mounted = true;
 
     async function getInitialSession() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (mounted) {
-          console.log('Initial session:', session);
           setSession(session);
         }
         if (error) throw error;
@@ -47,7 +51,6 @@ export default function Home() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
-        console.log('Auth state changed:', _event, session);
         setSession(session);
       }
     });
@@ -66,6 +69,27 @@ export default function Home() {
     }
   }, [session]);
 
+  const calculateMetrics = (historyData) => {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today.setDate(today.getDate() - 7));
+    const thirtyOneDaysAgo = new Date(today.setDate(today.getDate() - 31));
+
+    const sevenDayData = historyData.filter(entry => new Date(entry.date) >= sevenDaysAgo);
+    const thirtyOneDayData = historyData.filter(entry => new Date(entry.date) >= thirtyOneDaysAgo);
+
+    const sevenDayStrength = sevenDayData.reduce((sum, entry) => sum + entry.strength_volume, 0);
+    const sevenDayCardio = sevenDayData.reduce((sum, entry) => sum + entry.cardio_load, 0);
+    const thirtyOneDayStrength = thirtyOneDayData.reduce((sum, entry) => sum + entry.strength_volume, 0);
+    const thirtyOneDayCardio = thirtyOneDayData.reduce((sum, entry) => sum + entry.cardio_load, 0);
+
+    setMetrics({
+      sevenDayStrength,
+      sevenDayCardio,
+      thirtyOneDayStrength,
+      thirtyOneDayCardio,
+    });
+  };
+
   const fetchHistory = async () => {
     const { data, error } = await supabase
       .from('workouts')
@@ -76,6 +100,7 @@ export default function Home() {
       console.error(error);
     } else {
       setHistory(data);
+      calculateMetrics(data);
     }
   };
 
@@ -171,10 +196,27 @@ export default function Home() {
     return <AuthComponent />;
   }
 
+  const today = new Date();
+  const dateString = today.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const strengthRatio = metrics.thirtyOneDayStrength ? 
+    (metrics.sevenDayStrength / metrics.thirtyOneDayStrength * 31).toFixed(2) : 0;
+  const cardioRatio = metrics.thirtyOneDayCardio ? 
+    (metrics.sevenDayCardio / metrics.thirtyOneDayCardio * 31).toFixed(2) : 0;
+  const combinedRatio = ((Number(strengthRatio) + Number(cardioRatio)) / 2).toFixed(2);
+
   return (
-    <div className="p-4 max-w-lg mx-auto">
+    <div className="p-4 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Daily Focus Tracker</h1>
+        <div>
+          <h1 className="text-xl font-bold">Daily Focus Tracker</h1>
+          <p className="text-gray-600">{dateString}</p>
+        </div>
         <button
           onClick={() => supabase.auth.signOut()}
           className="px-4 py-2 bg-red-500 text-white rounded"
@@ -189,6 +231,29 @@ export default function Home() {
         <p className="text-pink-900 italic">
           {marriagePrompt || 'Loading...'}
         </p>
+      </div>
+
+      {/* Workout Section */}
+      <div className="mt-8">
+        <h2 className="text-lg font-bold mb-4">Workout Metrics</h2>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h3 className="font-semibold text-sm text-blue-700">7 Day Totals</h3>
+            <p>Strength: {metrics.sevenDayStrength} lbs</p>
+            <p>Cardio: {metrics.sevenDayCardio}</p>
+          </div>
+          <div className="p-4 bg-green-50 rounded-lg">
+            <h3 className="font-semibold text-sm text-green-700">31 Day Totals</h3>
+            <p>Strength: {metrics.thirtyOneDayStrength} lbs</p>
+            <p>Cardio: {metrics.thirtyOneDayCardio}</p>
+          </div>
+          <div className="p-4 bg-purple-50 rounded-lg">
+            <h3 className="font-semibold text-sm text-purple-700">Load Ratios</h3>
+            <p>Strength: {strengthRatio}</p>
+            <p>Cardio: {cardioRatio}</p>
+            <p>Combined: {combinedRatio}</p>
+          </div>
+        </div>
       </div>
 
       {/* Existing Workout Form */}
