@@ -1,17 +1,27 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import supabase from '../api/supabase';
+import ErrorMessage from './ErrorMessage';
 
 export default function AuthComponent() {
   const [isClient, setIsClient] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const buttonRef = useRef(null);
 
   useEffect(() => {
     setIsClient(true);
     
+    let retryCount = 0;
+    const maxRetries = 3;
+
     const checkGoogleScriptLoaded = () => {
+      if (retryCount >= maxRetries) {
+        setLoadError('Failed to load Google Sign In. Please refresh the page.');
+        return;
+      }
+
       const scriptLoaded = typeof window !== 'undefined' && 
         window.google?.accounts?.id;
 
@@ -19,7 +29,8 @@ export default function AuthComponent() {
         setIsLoaded(true);
         initializeGoogleSignIn();
       } else {
-        setTimeout(checkGoogleScriptLoaded, 100);
+        retryCount++;
+        setTimeout(checkGoogleScriptLoaded, 1000);
       }
     };
 
@@ -71,11 +82,8 @@ export default function AuthComponent() {
       <h1 className="text-2xl font-bold mb-8">Daily Focus Tracker</h1>
       <div className="p-8 border rounded-lg shadow-lg">
         <h2 className="text-xl mb-4">Please Sign In</h2>
-        {error && (
-          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} className="mb-4" />}
+        {loadError && <ErrorMessage message={loadError} className="mb-4" />}
         <div 
           ref={buttonRef}
           className="flex justify-center"

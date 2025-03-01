@@ -6,6 +6,7 @@ import LoadRatiosGraph from '../components/LoadRatiosGraph';
 import LoadRatioDisplay from '../components/LoadRatioDisplay';
 import LoadRatiosHeader from '../components/LoadRatiosHeader';
 import HydrationGuide from '../components/HydrationGuide';
+import ErrorMessage from '../components/ErrorMessage';
 
 export default function Home() {
   const [session, setSession] = useState(null);
@@ -29,6 +30,12 @@ export default function Home() {
   const [showHydrationGuide, setShowHydrationGuide] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [errors, setErrors] = useState({
+    history: null,
+    marriagePrompt: null,
+    session: null,
+    general: null
+  });
 
   const handleSignInWithGoogle = async (response) => {
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -49,12 +56,13 @@ export default function Home() {
     async function getInitialSession() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
         if (mounted) {
           setSession(session);
         }
-        if (error) throw error;
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('Session error:', error);
+        setErrors(prev => ({ ...prev, session: 'Failed to load session. Please sign out and try again.' }));
       }
     }
 
@@ -83,15 +91,15 @@ export default function Home() {
   }, [session]);
 
   const fetchHistory = async () => {
-    const { data, error } = await supabase
-      .from('workouts')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('workout_date', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('workout_date', { ascending: false });
 
-    if (error) {
-      console.error(error);
-    } else {
+      if (error) throw error;
+
       setHistory(data);
       const latestEntry = data[0];
       if (latestEntry) {
@@ -101,6 +109,10 @@ export default function Home() {
           combinedRatio: latestEntry.combined_ratio || 0
         });
       }
+      setErrors(prev => ({ ...prev, history: null }));
+    } catch (error) {
+      console.error('History fetch error:', error);
+      setErrors(prev => ({ ...prev, history: 'Failed to load workout history' }));
     }
   };
 
@@ -241,6 +253,11 @@ export default function Home() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        {errors.session && (
+          <div className="max-w-6xl mx-auto p-6">
+            <ErrorMessage message={errors.session} />
+          </div>
+        )}
         <div className="max-w-6xl mx-auto p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-8 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
@@ -256,15 +273,21 @@ export default function Home() {
             </button>
           </div>
 
+          {errors.general && <ErrorMessage message={errors.general} className="mb-6" />}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Marriage Focus Card */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-blue-100 dark:border-blue-900/30">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Daily Marriage Focus</h2>
-                <p className="text-gray-700 dark:text-gray-300 italic bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                  {marriagePrompt || 'Loading...'}
-                </p>
+                {errors.marriagePrompt ? (
+                  <ErrorMessage message={errors.marriagePrompt} />
+                ) : (
+                  <p className="text-gray-700 dark:text-gray-300 italic bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                    {marriagePrompt || 'Loading...'}
+                  </p>
+                )}
               </div>
 
               {/* Workout Form Card */}
@@ -314,6 +337,7 @@ export default function Home() {
 
             {/* Right Column */}
             <div className="space-y-6">
+              {errors.history && <ErrorMessage message={errors.history} />}
               {/* Only keep the Load Ratios card */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
                 <LoadRatiosHeader />
