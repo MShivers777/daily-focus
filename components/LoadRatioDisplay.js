@@ -26,6 +26,7 @@ export default function LoadRatioDisplay({ label, value, isVisible, color, onCli
           className={`font-semibold ml-2 ${getRatioColor(value)}`}
           data-tooltip-id={`ratio-tooltip-${label}`}
           data-tooltip-content={getTooltipContent(value)}
+          data-tooltip-delay-show={500}
         >
           {value}
         </span>

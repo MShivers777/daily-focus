@@ -28,6 +28,7 @@ export default function LoadRatiosHeader() {
         className="text-xl font-semibold text-gray-800 dark:text-white mb-4 cursor-help inline-flex items-center"
         data-tooltip-id="load-ratios-tooltip"
         data-tooltip-html={tooltipContent}
+        data-tooltip-delay-show={500}
       >
         Load Ratios
         <span className="ml-1 text-gray-400 text-sm">ⓘ</span>
