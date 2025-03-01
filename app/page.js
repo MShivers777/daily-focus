@@ -28,6 +28,7 @@ export default function Home() {
   });
   const [showHydrationGuide, setShowHydrationGuide] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const handleSignInWithGoogle = async (response) => {
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -106,40 +107,53 @@ export default function Home() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+    setSaveError(null);
     setShowHydrationGuide(true);
     
     const startTime = Date.now();
-    const formattedData = {
-      workout_date: workoutDate,
-      strength_volume: parseInt(strengthVolume) || 0,
-      cardio_load: parseInt(cardioLoad) || 0,
-      note: note,
-      user_id: session.user.id,
-      created_at: new Date().toISOString()
-    };
+    
+    try {
+      const formattedData = {
+        workout_date: workoutDate,
+        strength_volume: parseInt(strengthVolume) || 0,
+        cardio_load: parseInt(cardioLoad) || 0,
+        note: note,
+        user_id: session.user.id,
+        created_at: new Date().toISOString()
+      };
 
-    const { data, error } = await supabase
-      .from('workouts')
-      .insert([formattedData])
-      .select();
+      const { data, error } = await supabase
+        .from('workouts')
+        .insert([formattedData])
+        .select();
 
-    if (error) {
-      console.error('Submission error:', error.message);
-      alert(`Failed to submit: ${error.message}`);
-      setShowHydrationGuide(false);
-      setIsSaving(false);
-    } else {
+      if (error) throw error;
+
       // Ensure minimum 2 second loading time
       const elapsedTime = Date.now() - startTime;
       const remainingTime = Math.max(2000 - elapsedTime, 0);
-      
       await new Promise(resolve => setTimeout(resolve, remainingTime));
+
+      console.log('Workout saved successfully:', {
+        date: workoutDate,
+        strength: strengthVolume,
+        cardio: cardioLoad
+      });
 
       setWorkoutDate(new Date().toISOString().split('T')[0]);  // reset to today
       setStrengthVolume('');
       setCardioLoad('');
       setNote('');
       fetchHistory();
+    } catch (error) {
+      console.error('Failed to save workout:', {
+        error,
+        date: workoutDate,
+        strength: strengthVolume,
+        cardio: cardioLoad
+      });
+      setSaveError(error);
+    } finally {
       setIsSaving(false);
     }
   };
@@ -364,8 +378,12 @@ export default function Home() {
       </div>
       <HydrationGuide 
         isOpen={showHydrationGuide} 
-        onClose={() => setShowHydrationGuide(false)} 
+        onClose={() => {
+          setShowHydrationGuide(false);
+          setSaveError(null);
+        }}
         isSaving={isSaving}
+        error={saveError}
       />
     </>
   );

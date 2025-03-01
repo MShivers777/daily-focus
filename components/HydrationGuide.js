@@ -1,6 +1,6 @@
 'use client';
 
-export default function HydrationGuide({ isOpen, onClose, isSaving }) {
+export default function HydrationGuide({ isOpen, onClose, isSaving, error }) {
   if (!isOpen) return null;
 
   return (
@@ -18,8 +18,10 @@ export default function HydrationGuide({ isOpen, onClose, isSaving }) {
               ✕
             </button>
           </div>
-          <div className="text-green-600 dark:text-green-400 mb-6">
-            <span className="text-4xl">{isSaving ? '⟳' : '✓'}</span>
+          <div className={`mb-6 ${error ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+            <span className="text-4xl">
+              {isSaving ? '⟳' : error ? '✕' : '✓'}
+            </span>
             <h2 className="text-2xl font-bold mt-2">
               {isSaving ? (
                 <span className="inline-flex items-center">
@@ -29,10 +31,17 @@ export default function HydrationGuide({ isOpen, onClose, isSaving }) {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
                 </span>
+              ) : error ? (
+                'Failed to save workout. Please try again.'
               ) : (
                 'Workout saved successfully!'
               )}
             </h2>
+            {error && (
+              <p className="text-sm mt-2 text-red-500">
+                Error details have been logged to console
+              </p>
+            )}
           </div>
           <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
             Recommended Post-Workout Hydration
