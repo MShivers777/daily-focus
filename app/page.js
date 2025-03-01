@@ -191,6 +191,15 @@ export default function Home() {
     }));
   };
 
+  // Add input validation function
+  const handleNumberInput = (e, setter) => {
+    const value = e.target.value;
+    // Only allow digits, no 'e' or 'E'
+    if (/^\d*$/.test(value)) {
+      setter(value);
+    }
+  };
+
   if (!session) {
     return <AuthComponent />;
   }
@@ -243,17 +252,21 @@ export default function Home() {
                     className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
                   />
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="numeric"
+                    pattern="\d*"
                     placeholder="Strength Volume (lbs)" 
                     value={strengthVolume} 
-                    onChange={(e) => setStrengthVolume(e.target.value)} 
+                    onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
                     className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
                   />
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="numeric"
+                    pattern="\d*"
                     placeholder="Cardio Load" 
                     value={cardioLoad} 
-                    onChange={(e) => setCardioLoad(e.target.value)} 
+                    onChange={(e) => handleNumberInput(e, setCardioLoad)} 
                     className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
                   />
                   <textarea 
