@@ -8,14 +8,12 @@ import LoadRatiosHeader from '../components/LoadRatiosHeader';
 
 export default function Home() {
   const [session, setSession] = useState(null);
-  const [workoutDate, setWorkoutDate] = useState('');  // renamed from date
+  const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);  // default to today
   const [strengthVolume, setStrengthVolume] = useState('');
   const [cardioLoad, setCardioLoad] = useState('');
-  const [trainingCycleWeek, setTrainingCycleWeek] = useState('');
-  const [trainingCycleGoal, setTrainingCycleGoal] = useState('');
+  const [note, setNote] = useState('');
   const [history, setHistory] = useState([]);
   const [marriagePrompt, setMarriagePrompt] = useState('');
-  const [note, setNote] = useState('');
   const [workoutFocus, setWorkoutFocus] = useState('');
   const [metrics, setMetrics] = useState({
     strengthRatio: 0,
@@ -105,32 +103,14 @@ export default function Home() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!workoutDate) {
-      alert('Please select a date');
-      return;
-    }
-
-    // Format the data before submission
     const formattedData = {
       workout_date: workoutDate,
       strength_volume: parseInt(strengthVolume) || 0,
       cardio_load: parseInt(cardioLoad) || 0,
-      training_cycle_week: parseInt(trainingCycleWeek) || 0,
-      training_cycle_goal: trainingCycleGoal,
       note: note,
       user_id: session.user.id,
       created_at: new Date().toISOString(),
-      // These will be calculated server-side or in a trigger
-      seven_day_strength: 0,
-      seven_day_cardio: 0,
-      four_week_strength: 0,
-      four_week_cardio: 0,
-      strength_ratio: 0,
-      cardio_ratio: 0,
-      combined_ratio: 0
     };
-
-    console.log('Submitting data:', formattedData);
 
     const { data, error } = await supabase
       .from('workouts')
@@ -139,15 +119,11 @@ export default function Home() {
 
     if (error) {
       console.error('Submission error:', error.message);
-      console.error('Error details:', error);
       alert(`Failed to submit: ${error.message}`);
     } else {
-      console.log('Submission successful:', data);
-      setWorkoutDate('');
+      setWorkoutDate(new Date().toISOString().split('T')[0]);  // reset to today
       setStrengthVolume('');
       setCardioLoad('');
-      setTrainingCycleWeek('');
-      setTrainingCycleGoal('');
       setNote('');
       fetchHistory();
     }
@@ -260,20 +236,6 @@ export default function Home() {
                   type="date" 
                   value={workoutDate} 
                   onChange={(e) => setWorkoutDate(e.target.value)} 
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                />
-                <input 
-                  type="number" 
-                  placeholder="Training Cycle Week" 
-                  value={trainingCycleWeek} 
-                  onChange={(e) => setTrainingCycleWeek(e.target.value)} 
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                />
-                <input 
-                  type="text" 
-                  placeholder="Training Cycle Goal" 
-                  value={trainingCycleGoal} 
-                  onChange={(e) => setTrainingCycleGoal(e.target.value)} 
                   className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
                 />
                 <input 
