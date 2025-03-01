@@ -108,6 +108,7 @@ export default function Home() {
     setIsSaving(true);
     setShowHydrationGuide(true);
     
+    const startTime = Date.now();
     const formattedData = {
       workout_date: workoutDate,
       strength_volume: parseInt(strengthVolume) || 0,
@@ -126,7 +127,14 @@ export default function Home() {
       console.error('Submission error:', error.message);
       alert(`Failed to submit: ${error.message}`);
       setShowHydrationGuide(false);
+      setIsSaving(false);
     } else {
+      // Ensure minimum 2 second loading time
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(2000 - elapsedTime, 0);
+      
+      await new Promise(resolve => setTimeout(resolve, remainingTime));
+
       setWorkoutDate(new Date().toISOString().split('T')[0]);  // reset to today
       setStrengthVolume('');
       setCardioLoad('');

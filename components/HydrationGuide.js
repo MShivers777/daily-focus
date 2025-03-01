@@ -10,7 +10,10 @@ export default function HydrationGuide({ isOpen, onClose, isSaving }) {
           <div className="flex justify-end">
             <button 
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className={`text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ${
+                isSaving ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={isSaving}
             >
               ✕
             </button>
