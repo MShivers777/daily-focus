@@ -1,6 +1,6 @@
 'use client';
 
-export default function HydrationGuide({ isOpen, onClose }) {
+export default function HydrationGuide({ isOpen, onClose, isSaving }) {
   if (!isOpen) return null;
 
   return (
@@ -16,8 +16,20 @@ export default function HydrationGuide({ isOpen, onClose }) {
             </button>
           </div>
           <div className="text-green-600 dark:text-green-400 mb-6">
-            <span className="text-4xl">✓</span>
-            <h2 className="text-2xl font-bold mt-2">Workout Saved Successfully!</h2>
+            <span className="text-4xl">{isSaving ? '⟳' : '✓'}</span>
+            <h2 className="text-2xl font-bold mt-2">
+              {isSaving ? (
+                <span className="inline-flex items-center">
+                  Workout saving...
+                  <svg className="animate-spin ml-2 h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                </span>
+              ) : (
+                'Workout saved successfully!'
+              )}
+            </h2>
           </div>
           <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
             Recommended Post-Workout Hydration

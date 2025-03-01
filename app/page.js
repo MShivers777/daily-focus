@@ -27,6 +27,7 @@ export default function Home() {
     combined: true
   });
   const [showHydrationGuide, setShowHydrationGuide] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSignInWithGoogle = async (response) => {
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -104,6 +105,8 @@ export default function Home() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
+    setShowHydrationGuide(true);
     
     const formattedData = {
       workout_date: workoutDate,
@@ -122,13 +125,14 @@ export default function Home() {
     if (error) {
       console.error('Submission error:', error.message);
       alert(`Failed to submit: ${error.message}`);
+      setShowHydrationGuide(false);
     } else {
       setWorkoutDate(new Date().toISOString().split('T')[0]);  // reset to today
       setStrengthVolume('');
       setCardioLoad('');
       setNote('');
       fetchHistory();
-      setShowHydrationGuide(true); // Show hydration guide after successful submission
+      setIsSaving(false);
     }
   };
 
@@ -353,6 +357,7 @@ export default function Home() {
       <HydrationGuide 
         isOpen={showHydrationGuide} 
         onClose={() => setShowHydrationGuide(false)} 
+        isSaving={isSaving}
       />
     </>
   );
