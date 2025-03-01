@@ -2,19 +2,27 @@
 import { useEffect, useState } from 'react';
 
 export default function DarkModeToggle() {
+  const [mounted, setMounted] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setDarkMode(document.documentElement.classList.contains('dark'));
-    }
+    setMounted(true);
+    const isDark = document.documentElement.classList.contains('dark');
+    setDarkMode(isDark);
   }, []);
 
   const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
     document.documentElement.classList.toggle('dark');
-    setDarkMode(!darkMode);
-    localStorage.setItem('darkMode', !darkMode);
+    setDarkMode(newDarkMode);
+    try {
+      localStorage.setItem('darkMode', newDarkMode);
+    } catch (_) {}
   };
+
+  if (!mounted) {
+    return <div className="w-9 h-9"></div>; // Placeholder to prevent layout shift
+  }
 
   return (
     <button

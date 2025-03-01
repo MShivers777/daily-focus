@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import supabase from '../api/supabase';
 import AuthComponent from '../components/Auth';
+import LoadRatiosGraph from '../components/LoadRatiosGraph';
 
 export default function Home() {
   const [session, setSession] = useState(null);
@@ -15,10 +16,14 @@ export default function Home() {
   const [note, setNote] = useState('');
   const [workoutFocus, setWorkoutFocus] = useState('');
   const [metrics, setMetrics] = useState({
-    sevenDayStrength: 0,
-    sevenDayCardio: 0,
-    fourWeekStrength: 0,  // renamed from thirtyOneDayStrength
-    fourWeekCardio: 0,    // renamed from thirtyOneDayCardio
+    strengthRatio: 0,
+    cardioRatio: 0,
+    combinedRatio: 0
+  });
+  const [visibleLines, setVisibleLines] = useState({
+    strength: true,
+    cardio: true,
+    combined: true
   });
 
   const handleSignInWithGoogle = async (response) => {
@@ -87,10 +92,9 @@ export default function Home() {
       const latestEntry = data[0];
       if (latestEntry) {
         setMetrics({
-          sevenDayStrength: latestEntry.seven_day_strength || 0,
-          sevenDayCardio: latestEntry.seven_day_cardio || 0,
-          fourWeekStrength: latestEntry.four_week_strength || 0,
-          fourWeekCardio: latestEntry.four_week_cardio || 0,
+          strengthRatio: latestEntry.strength_ratio || 0,
+          cardioRatio: latestEntry.cardio_ratio || 0,
+          combinedRatio: latestEntry.combined_ratio || 0
         });
       }
     }
@@ -199,6 +203,13 @@ export default function Home() {
     }
   };
 
+  const toggleLine = (line) => {
+    setVisibleLines(prev => ({
+      ...prev,
+      [line]: !prev[line]
+    }));
+  };
+
   if (!session) {
     return <AuthComponent />;
   }
@@ -210,12 +221,6 @@ export default function Home() {
     month: 'long',
     day: 'numeric'
   });
-
-  const strengthRatio = metrics.fourWeekStrength ? 
-    (metrics.sevenDayStrength / metrics.fourWeekStrength * 28).toFixed(2) : 0;
-  const cardioRatio = metrics.fourWeekCardio ? 
-    (metrics.sevenDayCardio / metrics.fourWeekCardio * 28).toFixed(2) : 0;
-  const combinedRatio = ((Number(strengthRatio) + Number(cardioRatio)) / 2).toFixed(2);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -302,33 +307,57 @@ export default function Home() {
 
           {/* Right Column */}
           <div className="space-y-6">
-            {/* Metrics Cards */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">7 Day Overview</h2>
-              <div className="space-y-2">
-                <p className="text-gray-600 dark:text-gray-400">Strength: <span className="font-semibold text-gray-800 dark:text-white">{metrics.sevenDayStrength} lbs</span></p>
-                <p className="text-gray-600 dark:text-gray-400">Cardio: <span className="font-semibold text-gray-800 dark:text-white">{metrics.sevenDayCardio}</span></p>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">28 Day Overview</h2>
-              <div className="space-y-2">
-                <p className="text-gray-600 dark:text-gray-400">Strength: <span className="font-semibold text-gray-800 dark:text-white">{metrics.fourWeekStrength} lbs</span></p>
-                <p className="text-gray-600 dark:text-gray-400">Cardio: <span className="font-semibold text-gray-800 dark:text-white">{metrics.fourWeekCardio}</span></p>
-              </div>
-            </div>
-
+            {/* Only keep the Load Ratios card */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Load Ratios</h2>
-              <div className="space-y-2">
-                <p className="text-gray-600 dark:text-gray-400">Strength: <span className="font-semibold text-gray-800 dark:text-white">{strengthRatio}</span></p>
-                <p className="text-gray-600 dark:text-gray-400">Cardio: <span className="font-semibold text-gray-800 dark:text-white">{cardioRatio}</span></p>
-                <p className="text-gray-600 dark:text-gray-400">Combined: <span className="font-semibold text-gray-800 dark:text-white">{combinedRatio}</span></p>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Strength: <span className="font-semibold text-gray-800 dark:text-white">
+                      {metrics.strengthRatio}
+                    </span>
+                  </p>
+                  <button 
+                    onClick={() => toggleLine('strength')}
+                    className={`w-4 h-4 rounded ${
+                      visibleLines.strength ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Cardio: <span className="font-semibold text-gray-800 dark:text-white">
+                      {metrics.cardioRatio}
+                    </span>
+                  </p>
+                  <button 
+                    onClick={() => toggleLine('cardio')}
+                    className={`w-4 h-4 rounded ${
+                      visibleLines.cardio ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Combined: <span className="font-semibold text-gray-800 dark:text-white">
+                      {metrics.combinedRatio}
+                    </span>
+                  </p>
+                  <button 
+                    onClick={() => toggleLine('combined')}
+                    className={`w-4 h-4 rounded ${
+                      visibleLines.combined ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  />
+                </div>
               </div>
+              <LoadRatiosGraph 
+                data={history.slice(0, 14).reverse()} 
+                visibleLines={visibleLines} 
+              />
             </div>
 
-            {/* History Card */}
+            {/* History Card remains the same */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Recent History</h2>
               <div className="space-y-3 max-h-96 overflow-y-auto">
