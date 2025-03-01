@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import supabase from '../api/supabase';
 import AuthComponent from '../components/Auth';
 import LoadRatiosGraph from '../components/LoadRatiosGraph';
+import LoadRatioDisplay from '../components/LoadRatioDisplay';
+import LoadRatiosHeader from '../components/LoadRatiosHeader';
 
 export default function Home() {
   const [session, setSession] = useState(null);
@@ -309,47 +311,29 @@ export default function Home() {
           <div className="space-y-6">
             {/* Only keep the Load Ratios card */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Load Ratios</h2>
+              <LoadRatiosHeader />
               <div className="space-y-2 mb-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Strength: <span className="font-semibold text-gray-800 dark:text-white">
-                      {metrics.strengthRatio}
-                    </span>
-                  </p>
-                  <button 
-                    onClick={() => toggleLine('strength')}
-                    className={`w-4 h-4 rounded ${
-                      visibleLines.strength ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Cardio: <span className="font-semibold text-gray-800 dark:text-white">
-                      {metrics.cardioRatio}
-                    </span>
-                  </p>
-                  <button 
-                    onClick={() => toggleLine('cardio')}
-                    className={`w-4 h-4 rounded ${
-                      visibleLines.cardio ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Combined: <span className="font-semibold text-gray-800 dark:text-white">
-                      {metrics.combinedRatio}
-                    </span>
-                  </p>
-                  <button 
-                    onClick={() => toggleLine('combined')}
-                    className={`w-4 h-4 rounded ${
-                      visibleLines.combined ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  />
-                </div>
+                <LoadRatioDisplay 
+                  label="Strength"
+                  value={metrics.strengthRatio}
+                  isVisible={visibleLines.strength}
+                  color="bg-blue-500"
+                  onClick={() => toggleLine('strength')}
+                />
+                <LoadRatioDisplay 
+                  label="Cardio"
+                  value={metrics.cardioRatio}
+                  isVisible={visibleLines.cardio}
+                  color="bg-orange-500"
+                  onClick={() => toggleLine('cardio')}
+                />
+                <LoadRatioDisplay 
+                  label="Combined"
+                  value={metrics.combinedRatio}
+                  isVisible={visibleLines.combined}
+                  color="bg-green-500"
+                  onClick={() => toggleLine('combined')}
+                />
               </div>
               <LoadRatiosGraph 
                 data={history.slice(0, 14).reverse()} 

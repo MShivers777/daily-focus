@@ -1,5 +1,6 @@
 'use client';
 import { Line } from 'react-chartjs-2';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -18,7 +19,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  annotationPlugin  // Register the annotation plugin
 );
 
 export default function LoadRatiosGraph({ data, visibleLines }) {
@@ -34,7 +36,8 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
         hidden: !visibleLines.strength,
         borderWidth: 1.5,  // thinner line
         pointRadius: 0,    // remove points
-        tension: 0.3       // slight curve for smoother lines
+        tension: 0.3,      // slight curve for smoother lines
+        borderOpacity: visibleLines.strength ? 1 : 0.25,
       },
       {
         label: 'Cardio',
@@ -44,7 +47,8 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
         hidden: !visibleLines.cardio,
         borderWidth: 1.5,
         pointRadius: 0,
-        tension: 0.3
+        tension: 0.3,
+        borderOpacity: visibleLines.cardio ? 1 : 0.25,
       },
       {
         label: 'Combined',
@@ -54,7 +58,8 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
         hidden: !visibleLines.combined,
         borderWidth: 1.5,
         pointRadius: 0,
-        tension: 0.3
+        tension: 0.3,
+        borderOpacity: visibleLines.combined ? 1 : 0.25,
       }
     ]
   };
@@ -85,6 +90,17 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
       tooltip: {
         intersect: false,
         mode: 'index'
+      },
+      annotation: {
+        annotations: {
+          idealRange: {
+            type: 'box',
+            yMin: 0.8,
+            yMax: 1.4,
+            backgroundColor: 'rgba(34, 197, 94, 0.1)', // green-500 with low opacity
+            borderColor: 'transparent',
+          }
+        }
       }
     },
     interaction: {
