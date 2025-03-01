@@ -5,16 +5,20 @@ import AuthComponent from '../components/Auth';
 
 export default function Home() {
   const [session, setSession] = useState(null);
-  const [date, setDate] = useState('');
+  const [workoutDate, setWorkoutDate] = useState('');  // renamed from date
   const [strengthVolume, setStrengthVolume] = useState('');
   const [cardioLoad, setCardioLoad] = useState('');
+  const [trainingCycleWeek, setTrainingCycleWeek] = useState('');
+  const [trainingCycleGoal, setTrainingCycleGoal] = useState('');
   const [history, setHistory] = useState([]);
   const [marriagePrompt, setMarriagePrompt] = useState('');
+  const [note, setNote] = useState('');
+  const [workoutFocus, setWorkoutFocus] = useState('');
   const [metrics, setMetrics] = useState({
     sevenDayStrength: 0,
     sevenDayCardio: 0,
-    thirtyOneDayStrength: 0,
-    thirtyOneDayCardio: 0,
+    fourWeekStrength: 0,  // renamed from thirtyOneDayStrength
+    fourWeekCardio: 0,    // renamed from thirtyOneDayCardio
   });
 
   const handleSignInWithGoogle = async (response) => {
@@ -69,55 +73,55 @@ export default function Home() {
     }
   }, [session]);
 
-  const calculateMetrics = (historyData) => {
-    const today = new Date();
-    const sevenDaysAgo = new Date(today.setDate(today.getDate() - 7));
-    const thirtyOneDaysAgo = new Date(today.setDate(today.getDate() - 31));
-
-    const sevenDayData = historyData.filter(entry => new Date(entry.date) >= sevenDaysAgo);
-    const thirtyOneDayData = historyData.filter(entry => new Date(entry.date) >= thirtyOneDaysAgo);
-
-    const sevenDayStrength = sevenDayData.reduce((sum, entry) => sum + entry.strength_volume, 0);
-    const sevenDayCardio = sevenDayData.reduce((sum, entry) => sum + entry.cardio_load, 0);
-    const thirtyOneDayStrength = thirtyOneDayData.reduce((sum, entry) => sum + entry.strength_volume, 0);
-    const thirtyOneDayCardio = thirtyOneDayData.reduce((sum, entry) => sum + entry.cardio_load, 0);
-
-    setMetrics({
-      sevenDayStrength,
-      sevenDayCardio,
-      thirtyOneDayStrength,
-      thirtyOneDayCardio,
-    });
-  };
-
   const fetchHistory = async () => {
     const { data, error } = await supabase
       .from('workouts')
       .select('*')
-      .order('date', { ascending: false });
+      .eq('user_id', session.user.id)
+      .order('workout_date', { ascending: false });
 
     if (error) {
       console.error(error);
     } else {
       setHistory(data);
-      calculateMetrics(data);
+      const latestEntry = data[0];
+      if (latestEntry) {
+        setMetrics({
+          sevenDayStrength: latestEntry.seven_day_strength || 0,
+          sevenDayCardio: latestEntry.seven_day_cardio || 0,
+          fourWeekStrength: latestEntry.four_week_strength || 0,
+          fourWeekCardio: latestEntry.four_week_cardio || 0,
+        });
+      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!date) {
+    if (!workoutDate) {
       alert('Please select a date');
       return;
     }
 
     // Format the data before submission
     const formattedData = {
-      date,
+      workout_date: workoutDate,
       strength_volume: parseInt(strengthVolume) || 0,
       cardio_load: parseInt(cardioLoad) || 0,
-      created_at: new Date().toISOString()
+      training_cycle_week: parseInt(trainingCycleWeek) || 0,
+      training_cycle_goal: trainingCycleGoal,
+      note: note,
+      user_id: session.user.id,
+      created_at: new Date().toISOString(),
+      // These will be calculated server-side or in a trigger
+      seven_day_strength: 0,
+      seven_day_cardio: 0,
+      four_week_strength: 0,
+      four_week_cardio: 0,
+      strength_ratio: 0,
+      cardio_ratio: 0,
+      combined_ratio: 0
     };
 
     console.log('Submitting data:', formattedData);
@@ -133,9 +137,12 @@ export default function Home() {
       alert(`Failed to submit: ${error.message}`);
     } else {
       console.log('Submission successful:', data);
-      setDate('');
+      setWorkoutDate('');
       setStrengthVolume('');
       setCardioLoad('');
+      setTrainingCycleWeek('');
+      setTrainingCycleGoal('');
+      setNote('');
       fetchHistory();
     }
   };
@@ -204,10 +211,10 @@ export default function Home() {
     day: 'numeric'
   });
 
-  const strengthRatio = metrics.thirtyOneDayStrength ? 
-    (metrics.sevenDayStrength / metrics.thirtyOneDayStrength * 31).toFixed(2) : 0;
-  const cardioRatio = metrics.thirtyOneDayCardio ? 
-    (metrics.sevenDayCardio / metrics.thirtyOneDayCardio * 31).toFixed(2) : 0;
+  const strengthRatio = metrics.fourWeekStrength ? 
+    (metrics.sevenDayStrength / metrics.fourWeekStrength * 28).toFixed(2) : 0;
+  const cardioRatio = metrics.fourWeekCardio ? 
+    (metrics.sevenDayCardio / metrics.fourWeekCardio * 28).toFixed(2) : 0;
   const combinedRatio = ((Number(strengthRatio) + Number(cardioRatio)) / 2).toFixed(2);
 
   return (
@@ -244,8 +251,22 @@ export default function Home() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <input 
                   type="date" 
-                  value={date} 
-                  onChange={(e) => setDate(e.target.value)} 
+                  value={workoutDate} 
+                  onChange={(e) => setWorkoutDate(e.target.value)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <input 
+                  type="number" 
+                  placeholder="Training Cycle Week" 
+                  value={trainingCycleWeek} 
+                  onChange={(e) => setTrainingCycleWeek(e.target.value)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <input 
+                  type="text" 
+                  placeholder="Training Cycle Goal" 
+                  value={trainingCycleGoal} 
+                  onChange={(e) => setTrainingCycleGoal(e.target.value)} 
                   className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
                 />
                 <input 
@@ -261,6 +282,13 @@ export default function Home() {
                   value={cardioLoad} 
                   onChange={(e) => setCardioLoad(e.target.value)} 
                   className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <textarea 
+                  placeholder="Workout Notes" 
+                  value={note} 
+                  onChange={(e) => setNote(e.target.value)} 
+                  rows="3"
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" 
                 />
                 <button 
                   type="submit" 
@@ -284,10 +312,10 @@ export default function Home() {
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">31 Day Overview</h2>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">28 Day Overview</h2>
               <div className="space-y-2">
-                <p className="text-gray-600 dark:text-gray-400">Strength: <span className="font-semibold text-gray-800 dark:text-white">{metrics.thirtyOneDayStrength} lbs</span></p>
-                <p className="text-gray-600 dark:text-gray-400">Cardio: <span className="font-semibold text-gray-800 dark:text-white">{metrics.thirtyOneDayCardio}</span></p>
+                <p className="text-gray-600 dark:text-gray-400">Strength: <span className="font-semibold text-gray-800 dark:text-white">{metrics.fourWeekStrength} lbs</span></p>
+                <p className="text-gray-600 dark:text-gray-400">Cardio: <span className="font-semibold text-gray-800 dark:text-white">{metrics.fourWeekCardio}</span></p>
               </div>
             </div>
 
@@ -306,12 +334,22 @@ export default function Home() {
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {history.map((entry) => (
                   <div key={entry.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">{entry.date}</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">
+                      {entry.workout_date} - Week {entry.training_cycle_week}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Goal: {entry.training_cycle_goal}
+                    </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Strength: {entry.strength_volume} lbs
                       <span className="mx-2">•</span>
                       Cardio: {entry.cardio_load}
                     </p>
+                    {entry.note && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
+                        {entry.note}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
