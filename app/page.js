@@ -7,6 +7,7 @@ import LoadRatioDisplay from '../components/LoadRatioDisplay';
 import LoadRatiosHeader from '../components/LoadRatiosHeader';
 import HydrationGuide from '../components/HydrationGuide';
 import ErrorMessage from '../components/ErrorMessage';
+import WorkoutConfirmation from '../components/WorkoutConfirmation';
 
 export default function Home() {
   const [session, setSession] = useState(null);
@@ -36,6 +37,9 @@ export default function Home() {
     session: null,
     general: null
   });
+  const [showWorkoutConfirm, setShowWorkoutConfirm] = useState(false);
+  const [existingWorkout, setExistingWorkout] = useState(null);
+  const [pendingWorkout, setPendingWorkout] = useState(null);
 
   const handleSignInWithGoogle = async (response) => {
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -118,6 +122,39 @@ export default function Home() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const formattedData = {
+      workout_date: workoutDate,
+      strength_volume: parseInt(strengthVolume) || 0,
+      cardio_load: parseInt(cardioLoad) || 0,
+      note: note,
+      user_id: session.user.id,
+      created_at: new Date().toISOString()
+    };
+
+    // Check for existing workout
+    const { data: existingData, error: checkError } = await supabase
+      .from('workouts')
+      .select('*')
+      .eq('workout_date', workoutDate)
+      .eq('user_id', session.user.id);
+
+    if (checkError) {
+      console.error('Error checking existing workout:', checkError);
+      return;
+    }
+
+    if (existingData && existingData.length > 0) {
+      setExistingWorkout(existingData[0]);
+      setPendingWorkout(formattedData);
+      setShowWorkoutConfirm(true);
+      return;
+    }
+
+    await saveWorkout(formattedData);
+  };
+
+  const saveWorkout = async (data, mode = 'new') => {
     setIsSaving(true);
     setSaveError(null);
     setShowHydrationGuide(true);
@@ -125,48 +162,98 @@ export default function Home() {
     const startTime = Date.now();
     
     try {
-      const formattedData = {
-        workout_date: workoutDate,
-        strength_volume: parseInt(strengthVolume) || 0,
-        cardio_load: parseInt(cardioLoad) || 0,
-        note: note,
+      let result;
+
+      // Ensure we have the required fields
+      const baseData = {
+        workout_date: data.workout_date,
+        strength_volume: parseInt(data.strength_volume) || 0,
+        cardio_load: parseInt(data.cardio_load) || 0,
+        note: data.note || '',
         user_id: session.user.id,
-        created_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
-        .from('workouts')
-        .insert([formattedData])
-        .select();
+      if (mode === 'add') {
+        // Add to existing totals
+        const combinedData = {
+          ...baseData,
+          strength_volume: (existingWorkout.strength_volume || 0) + (baseData.strength_volume || 0),
+          cardio_load: (existingWorkout.cardio_load || 0) + (baseData.cardio_load || 0),
+          note: baseData.note ? `${existingWorkout.note || ''}\n${baseData.note}` : existingWorkout.note,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('Adding to existing workout:', { combinedData, existingId: existingWorkout.id });
+        
+        result = await supabase
+          .from('workouts')
+          .update(combinedData)
+          .eq('id', existingWorkout.id)
+          .select('*')
+          .single();
 
-      if (error) throw error;
+      } else if (mode === 'replace') {
+        console.log('Replacing workout:', { baseData, existingId: existingWorkout.id });
+        
+        result = await supabase
+          .from('workouts')
+          .update(baseData)
+          .eq('id', existingWorkout.id)
+          .select('*')
+          .single();
 
-      // Ensure minimum 2 second loading time
+      } else {
+        console.log('Creating new workout:', baseData);
+        
+        result = await supabase
+          .from('workouts')
+          .insert([baseData])
+          .select('*')
+          .single();
+      }
+
+      if (result.error) {
+        console.error('Database operation failed:', {
+          mode,
+          error: result.error,
+          data: baseData,
+          result
+        });
+        throw new Error(`Failed to ${mode} workout: ${result.error.message}`);
+      }
+
+      console.log('Operation successful:', {
+        mode,
+        result: result.data
+      });
+
+      // Wait for minimum loading time
       const elapsedTime = Date.now() - startTime;
       const remainingTime = Math.max(2000 - elapsedTime, 0);
       await new Promise(resolve => setTimeout(resolve, remainingTime));
 
-      console.log('Workout saved successfully:', {
-        date: workoutDate,
-        strength: strengthVolume,
-        cardio: cardioLoad
-      });
-
-      setWorkoutDate(new Date().toISOString().split('T')[0]);  // reset to today
+      await fetchHistory();
+      
+      // Reset form
+      setWorkoutDate(new Date().toISOString().split('T')[0]);
       setStrengthVolume('');
       setCardioLoad('');
       setNote('');
-      fetchHistory();
+
     } catch (error) {
       console.error('Failed to save workout:', {
         error,
-        date: workoutDate,
+        mode,
+        workoutDate,
         strength: strengthVolume,
         cardio: cardioLoad
       });
       setSaveError(error);
     } finally {
       setIsSaving(false);
+      setShowWorkoutConfirm(false);
+      setExistingWorkout(null);
+      setPendingWorkout(null);
     }
   };
 
@@ -236,6 +323,15 @@ export default function Home() {
     if (/^\d*$/.test(value)) {
       setter(value);
     }
+  };
+
+  const handleEdit = () => {
+    // Pre-fill form with existing data
+    setWorkoutDate(existingWorkout.workout_date);
+    setStrengthVolume(existingWorkout.strength_volume.toString());
+    setCardioLoad(existingWorkout.cardio_load.toString());
+    setNote(existingWorkout.note || '');
+    setShowWorkoutConfirm(false);
   };
 
   if (!session) {
@@ -370,7 +466,7 @@ export default function Home() {
                 />
               </div>
 
-              {/* History Card remains the same */}
+              {/* History Card */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Recent History</h2>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -400,6 +496,15 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <WorkoutConfirmation 
+        isOpen={showWorkoutConfirm}
+        onClose={() => setShowWorkoutConfirm(false)}
+        existingWorkout={existingWorkout}
+        newWorkout={pendingWorkout}
+        onAdd={() => saveWorkout(pendingWorkout, 'add')}
+        onReplace={() => saveWorkout(pendingWorkout, 'replace')}
+        onEdit={handleEdit}
+      />
       <HydrationGuide 
         isOpen={showHydrationGuide} 
         onClose={() => {
