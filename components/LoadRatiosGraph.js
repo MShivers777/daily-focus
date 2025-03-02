@@ -34,13 +34,24 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
   }
 
   try {
+    // Prepare data arrays with null checks
+    const strengthData = data.map(d => d.strength_ratio ?? 0);
+    const cardioData = data.map(d => d.cardio_ratio ?? 0);
+    const combinedData = data.map(d => {
+      // If combined_ratio exists, use it
+      if (d.combined_ratio != null) return d.combined_ratio;
+      // Otherwise calculate it from individual ratios
+      const strength = d.strength_ratio ?? 0;
+      const cardio = d.cardio_ratio ?? 0;
+      return (strength + cardio) / 2;
+    });
+
     const chartData = {
-      // Show only last 14 days of data
-      labels: data.slice(0, 14).map(d => d.workout_date),
+      labels: data.map(d => d.workout_date),
       datasets: [
         {
           label: 'Strength',
-          data: data.slice(0, 14).map(d => d.strength_ratio),
+          data: strengthData,
           borderColor: 'rgb(59, 130, 246)', // blue-500
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
           hidden: !visibleLines.strength,
@@ -51,7 +62,7 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
         },
         {
           label: 'Cardio',
-          data: data.slice(0, 14).map(d => d.cardio_ratio),
+          data: cardioData,
           borderColor: 'rgb(234, 88, 12)', // orange-500
           backgroundColor: 'rgba(234, 88, 12, 0.1)',
           hidden: !visibleLines.cardio,
@@ -62,7 +73,7 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
         },
         {
           label: 'Combined',
-          data: data.slice(0, 14).map(d => d.combined_ratio),
+          data: combinedData,
           borderColor: 'rgb(16, 185, 129)', // green-500
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
           hidden: !visibleLines.combined,
