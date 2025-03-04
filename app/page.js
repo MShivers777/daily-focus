@@ -8,6 +8,7 @@ import LoadRatiosHeader from '../components/LoadRatiosHeader';
 import HydrationGuide from '../components/HydrationGuide';
 import ErrorMessage from '../components/ErrorMessage';
 import WorkoutConfirmation from '../components/WorkoutConfirmation';
+import WorkoutPlanner from '../components/WorkoutPlanner';
 
 export default function Home() {
   const [session, setSession] = useState(null);
@@ -40,6 +41,7 @@ export default function Home() {
   const [showWorkoutConfirm, setShowWorkoutConfirm] = useState(false);
   const [existingWorkout, setExistingWorkout] = useState(null);
   const [pendingWorkout, setPendingWorkout] = useState(null);
+  const [activeTab, setActiveTab] = useState('tracker'); // Add this state
 
   const handleSignInWithGoogle = async (response) => {
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -369,131 +371,158 @@ export default function Home() {
             </button>
           </div>
 
-          {errors.general && <ErrorMessage message={errors.general} className="mb-6" />}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Marriage Focus Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-blue-100 dark:border-blue-900/30">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Daily Marriage Focus</h2>
-                {errors.marriagePrompt ? (
-                  <ErrorMessage message={errors.marriagePrompt} />
-                ) : (
-                  <p className="text-gray-700 dark:text-gray-300 italic bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                    {marriagePrompt || 'Loading...'}
-                  </p>
-                )}
-              </div>
-
-              {/* Workout Form Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Add Workout</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <input 
-                    type="date" 
-                    value={workoutDate} 
-                    onChange={(e) => setWorkoutDate(e.target.value)} 
-                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                  />
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    pattern="\d*"
-                    placeholder="Strength Volume (lbs)" 
-                    value={strengthVolume} 
-                    onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
-                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                  />
-                  <input 
-                    type="text" 
-                    inputMode="numeric"
-                    pattern="\d*"
-                    placeholder="Cardio Load" 
-                    value={cardioLoad} 
-                    onChange={(e) => handleNumberInput(e, setCardioLoad)} 
-                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                  />
-                  <textarea 
-                    placeholder="Workout Notes" 
-                    value={note} 
-                    onChange={(e) => setNote(e.target.value)} 
-                    rows="3"
-                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" 
-                  />
-                  <button 
-                    type="submit" 
-                    className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all font-medium"
-                  >
-                    Save Workout
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-6">
-              {errors.history && <ErrorMessage message={errors.history} />}
-              {/* Only keep the Load Ratios card */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-                <LoadRatiosHeader />
-                <div className="space-y-2 mb-4">
-                  <LoadRatioDisplay 
-                    label="Strength"
-                    value={metrics.strengthRatio}
-                    isVisible={visibleLines.strength}
-                    color="bg-blue-500"
-                    onClick={() => toggleLine('strength')}
-                  />
-                  <LoadRatioDisplay 
-                    label="Cardio"
-                    value={metrics.cardioRatio}
-                    isVisible={visibleLines.cardio}
-                    color="bg-orange-500"
-                    onClick={() => toggleLine('cardio')}
-                  />
-                  <LoadRatioDisplay 
-                    label="Combined"
-                    value={metrics.combinedRatio}
-                    isVisible={visibleLines.combined}
-                    color="bg-green-500"
-                    onClick={() => toggleLine('combined')}
-                  />
-                </div>
-                <LoadRatiosGraph 
-                  data={history.slice(0, 14).reverse()} 
-                  visibleLines={visibleLines} 
-                />
-              </div>
-
-              {/* History Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Recent History</h2>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {history.map((entry) => (
-                    <div key={entry.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <p className="text-sm font-medium text-gray-800 dark:text-white">
-                        {entry.workout_date} - Week {entry.training_cycle_week}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Goal: {entry.training_cycle_goal}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Strength: {entry.strength_volume} lbs
-                        <span className="mx-2">•</span>
-                        Cardio: {entry.cardio_load}
-                      </p>
-                      {entry.note && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
-                          {entry.note}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* Add Tab Navigation */}
+          <div className="flex space-x-2 mb-6">
+            <button
+              onClick={() => setActiveTab('tracker')}
+              className={`px-4 py-2 rounded-lg transition-all ${
+                activeTab === 'tracker'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Workout Tracker
+            </button>
+            <button
+              onClick={() => setActiveTab('planner')}
+              className={`px-4 py-2 rounded-lg transition-all ${
+                activeTab === 'planner'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Workout Planner
+            </button>
           </div>
+
+          {activeTab === 'tracker' ? (
+            // Existing tracker content
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Marriage Focus Card */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-blue-100 dark:border-blue-900/30">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Daily Marriage Focus</h2>
+                  {errors.marriagePrompt ? (
+                    <ErrorMessage message={errors.marriagePrompt} />
+                  ) : (
+                    <p className="text-gray-700 dark:text-gray-300 italic bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                      {marriagePrompt || 'Loading...'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Workout Form Card */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Add Workout</h2>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <input 
+                      type="date" 
+                      value={workoutDate} 
+                      onChange={(e) => setWorkoutDate(e.target.value)} 
+                      className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                    />
+                    <input 
+                      type="text" 
+                      inputMode="numeric"
+                      pattern="\d*"
+                      placeholder="Strength Volume (lbs)" 
+                      value={strengthVolume} 
+                      onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
+                      className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                    />
+                    <input 
+                      type="text" 
+                      inputMode="numeric"
+                      pattern="\d*"
+                      placeholder="Cardio Load" 
+                      value={cardioLoad} 
+                      onChange={(e) => handleNumberInput(e, setCardioLoad)} 
+                      className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                    />
+                    <textarea 
+                      placeholder="Workout Notes" 
+                      value={note} 
+                      onChange={(e) => setNote(e.target.value)} 
+                      rows="3"
+                      className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" 
+                    />
+                    <button 
+                      type="submit" 
+                      className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all font-medium"
+                    >
+                      Save Workout
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {errors.history && <ErrorMessage message={errors.history} />}
+                {/* Only keep the Load Ratios card */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                  <LoadRatiosHeader />
+                  <div className="space-y-2 mb-4">
+                    <LoadRatioDisplay 
+                      label="Strength"
+                      value={metrics.strengthRatio}
+                      isVisible={visibleLines.strength}
+                      color="bg-blue-500"
+                      onClick={() => toggleLine('strength')}
+                    />
+                    <LoadRatioDisplay 
+                      label="Cardio"
+                      value={metrics.cardioRatio}
+                      isVisible={visibleLines.cardio}
+                      color="bg-orange-500"
+                      onClick={() => toggleLine('cardio')}
+                    />
+                    <LoadRatioDisplay 
+                      label="Combined"
+                      value={metrics.combinedRatio}
+                      isVisible={visibleLines.combined}
+                      color="bg-green-500"
+                      onClick={() => toggleLine('combined')}
+                    />
+                  </div>
+                  <LoadRatiosGraph 
+                    data={history.slice(0, 14).reverse()} 
+                    visibleLines={visibleLines} 
+                  />
+                </div>
+
+                {/* History Card */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Recent History</h2>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {history.map((entry) => (
+                      <div key={entry.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <p className="text-sm font-medium text-gray-800 dark:text-white">
+                          {entry.workout_date} - Week {entry.training_cycle_week}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Goal: {entry.training_cycle_goal}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Strength: {entry.strength_volume} lbs
+                          <span className="mx-2">•</span>
+                          Cardio: {entry.cardio_load}
+                        </p>
+                        {entry.note && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
+                            {entry.note}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <WorkoutPlanner history={history} />
+          )}
         </div>
       </div>
       <WorkoutConfirmation 
