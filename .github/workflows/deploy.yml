@@ -45,25 +45,25 @@ jobs:
           NODE_ENV: production
         run: npm run build
 
-      - name: Fix output directory
+      - name: Verify output directory
         run: |
           if [ -d "out" ]; then
-            echo "Build output exists"
+            echo "Build output exists:"
             ls -la out/
           else
-            echo "No out directory found!"
+            echo "No out directory found!" >&2
             exit 1
           fi
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           name: github-pages
           path: out
-          retention-days: 1
-          if-no-files-found: error
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v3
         with:
           artifact_name: github-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
