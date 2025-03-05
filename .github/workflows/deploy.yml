@@ -43,23 +43,27 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NODE_ENV: production
-        run: |
-          npm run build
-          [ -d out ] && echo "Build output exists" || exit 1
-          echo "Build contents:"
-          ls -la out/
+        run: npm run build
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Fix output directory
+        run: |
+          if [ -d "out" ]; then
+            echo "Build output exists"
+            ls -la out/
+          else
+            echo "No out directory found!"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: github-pages
           path: out
           retention-days: 1
-
-      - name: Wait for artifact
-        run: sleep 10
+          if-no-files-found: error
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           artifact_name: github-pages
