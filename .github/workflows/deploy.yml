@@ -27,7 +27,7 @@ jobs:
         run: npm install
 
       - name: Build Project
-        run: npm run build
+        run: npm run build:static
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

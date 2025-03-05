@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "cp next.config.prod.js next.config.js && next build && git checkout next.config.js",
     "start": "next start",
     "lint": "next lint"
   },
