@@ -31,11 +31,11 @@ export default function WorkoutPlanner({ session }) {
   const handlePlanWorkout = async (planData) => {
     try {
       setError(null);
-      const newWorkout = await createPlannedWorkout({
+      await createPlannedWorkout({
         ...planData,
         user_id: session.user.id
       });
-      setPlannedWorkouts(prev => [...prev, newWorkout]);
+      await loadPlannedWorkouts();
       setShowPlanForm(false);
     } catch (err) {
       setError('Failed to plan workout');

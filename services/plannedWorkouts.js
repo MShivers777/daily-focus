@@ -11,18 +11,17 @@ export async function createPlannedWorkout(data) {
   return result;
 }
 
-export async function getPlannedWorkouts(userId, startDate, endDate) {
-  const query = supabase
+export async function getPlannedWorkouts(startDate = null, endDate = null) {
+  let query = supabase
     .from('planned_workouts')
     .select('*')
-    .eq('user_id', userId)
     .order('start_date', { ascending: true });
 
   if (startDate) {
-    query.gte('start_date', startDate);
+    query = query.gte('start_date', startDate);
   }
   if (endDate) {
-    query.lte('start_date', endDate);
+    query = query.lte('start_date', endDate);
   }
 
   const { data, error } = await query;
