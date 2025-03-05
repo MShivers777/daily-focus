@@ -1,11 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',  // Enable static exports
+  output: 'export',
   images: {
     unoptimized: true,
   },
-  basePath: '/daily-focus', // Match your repository name
-  assetPrefix: '/daily-focus/', // Match your repository name
+  basePath: '/daily-focus',
+  assetPrefix: '/daily-focus/',
 }
 
 module.exports = nextConfig
