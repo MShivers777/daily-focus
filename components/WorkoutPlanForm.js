@@ -1,43 +1,33 @@
 'use client';
 import { useState } from 'react';
 
-export default function WorkoutPlanForm({ onSubmit }) {
+const WEEKDAYS = [
+  { id: 'sunday', label: 'Sun' },
+  { id: 'monday', label: 'Mon' },
+  { id: 'tuesday', label: 'Tue' },
+  { id: 'wednesday', label: 'Wed' },
+  { id: 'thursday', label: 'Thu' },
+  { id: 'friday', label: 'Fri' },
+  { id: 'saturday', label: 'Sat' }
+];
+
+export default function WorkoutPlanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     startDate: new Date().toISOString().split('T')[0],
     strengthVolume: '',
     cardioLoad: '',
     note: '',
-    recurrence: 'once', // once, daily, weekly, biweekly, custom
-    customDays: {
-      sunday: false,
-      monday: false,
-      tuesday: false,
-      wednesday: false,
-      thursday: false,
-      friday: false,
-      saturday: false
-    },
-    endType: 'never', // never, after, on
+    recurrence: 'once',
+    customDays: WEEKDAYS.reduce((acc, day) => ({ ...acc, [day.id]: false }), {}),
+    endType: 'never',
     endAfter: 1,
-    endDate: '',
+    endDate: ''
   });
-
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
   const handleChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
-    }));
-  };
-
-  const handleCustomDayToggle = (day) => {
-    setFormData(prev => ({
-      ...prev,
-      customDays: {
-        ...prev.customDays,
-        [day]: !prev.customDays[day]
-      }
     }));
   };
 
@@ -48,7 +38,7 @@ export default function WorkoutPlanForm({ onSubmit }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Workout Info */}
+      {/* Basic Fields */}
       <div className="space-y-4">
         <input
           type="date"
@@ -79,60 +69,62 @@ export default function WorkoutPlanForm({ onSubmit }) {
         />
       </div>
 
-      {/* Recurrence Options */}
-      <div className="space-y-4">
+      {/* Recurrence Section */}
+      <div className="space-y-4 border-t pt-4">
         <div className="flex flex-wrap gap-2">
-          {['once', 'daily', 'weekly', 'biweekly', 'custom'].map(option => (
+          {['once', 'daily', 'weekly', 'biweekly', 'custom'].map(type => (
             <button
-              key={option}
+              key={type}
               type="button"
-              onClick={() => handleChange('recurrence', option)}
-              className={`px-4 py-2 rounded-lg ${
-                formData.recurrence === option
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              onClick={() => handleChange('recurrence', type)}
+              className={`px-3 py-2 rounded ${
+                formData.recurrence === type 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700'
               }`}
             >
-              {option.charAt(0).toUpperCase() + option.slice(1)}
+              {type.charAt(0).toUpperCase() + type.slice(1)}
             </button>
           ))}
         </div>
 
-        {/* Custom Days Selector */}
         {formData.recurrence === 'custom' && (
           <div className="flex flex-wrap gap-2">
-            {dayNames.map(day => (
+            {WEEKDAYS.map(day => (
               <button
-                key={day}
+                key={day.id}
                 type="button"
-                onClick={() => handleCustomDayToggle(day)}
-                className={`px-4 py-2 rounded-lg ${
-                  formData.customDays[day]
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                onClick={() => handleChange('customDays', {
+                  ...formData.customDays,
+                  [day.id]: !formData.customDays[day.id]
+                })}
+                className={`px-3 py-2 rounded ${
+                  formData.customDays[day.id]
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                {day.charAt(0).toUpperCase() + day.slice(1, 3)}
+                {day.label}
               </button>
             ))}
           </div>
         )}
 
         {/* End Options */}
-        <div className="space-y-4">
+        <div className="space-y-4 border-t pt-4">
           <div className="flex flex-wrap gap-2">
-            {['never', 'after', 'on'].map(option => (
+            {['never', 'after', 'on'].map(type => (
               <button
-                key={option}
+                key={type}
                 type="button"
-                onClick={() => handleChange('endType', option)}
-                className={`px-4 py-2 rounded-lg ${
-                  formData.endType === option
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                onClick={() => handleChange('endType', type)}
+                className={`px-3 py-2 rounded ${
+                  formData.endType === type
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                End {option}
+                End {type}
               </button>
             ))}
           </div>
@@ -143,7 +135,7 @@ export default function WorkoutPlanForm({ onSubmit }) {
               min="1"
               value={formData.endAfter}
               onChange={(e) => handleChange('endAfter', parseInt(e.target.value))}
-              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
+              className="w-full p-2 border rounded"
               placeholder="Number of occurrences"
             />
           )}
@@ -153,18 +145,28 @@ export default function WorkoutPlanForm({ onSubmit }) {
               type="date"
               value={formData.endDate}
               onChange={(e) => handleChange('endDate', e.target.value)}
-              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
+              className="w-full p-2 border rounded"
             />
           )}
         </div>
       </div>
 
-      <button
-        type="submit"
-        className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-      >
-        Plan Workout
-      </button>
+      {/* Submit/Cancel Buttons */}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          className="flex-1 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          Plan Workout
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 bg-gray-100 text-gray-700 p-2 rounded hover:bg-gray-200"
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

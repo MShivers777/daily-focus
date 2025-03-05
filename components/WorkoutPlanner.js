@@ -1,21 +1,51 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import WorkoutList from './WorkoutList';
 import WorkoutPlanForm from './WorkoutPlanForm';
+import { createPlannedWorkout, getPlannedWorkouts } from '../services/plannedWorkouts';
+import ErrorMessage from './ErrorMessage';
 
-export default function WorkoutPlanner({ history = [] }) {
+export default function WorkoutPlanner({ session }) {
   const [view, setView] = useState('list');
   const [showPlanForm, setShowPlanForm] = useState(false);
+  const [plannedWorkouts, setPlannedWorkouts] = useState([]);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadPlannedWorkouts();
+  }, []);
+
+  async function loadPlannedWorkouts() {
+    try {
+      const data = await getPlannedWorkouts(session.user.id);
+      setPlannedWorkouts(data);
+    } catch (err) {
+      setError('Failed to load planned workouts');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const handlePlanWorkout = async (planData) => {
     try {
-      // TODO: Implement the logic to save planned workouts
-      console.log('Plan data:', planData);
+      setError(null);
+      const newWorkout = await createPlannedWorkout({
+        ...planData,
+        user_id: session.user.id
+      });
+      setPlannedWorkouts(prev => [...prev, newWorkout]);
       setShowPlanForm(false);
-    } catch (error) {
-      console.error('Failed to plan workout:', error);
+    } catch (err) {
+      setError('Failed to plan workout');
+      console.error(err);
     }
   };
+
+  if (isLoading) {
+    return <div>Loading planned workouts...</div>;
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
@@ -69,12 +99,13 @@ export default function WorkoutPlanner({ history = [] }) {
           <WorkoutPlanForm onSubmit={handlePlanWorkout} />
         </div>
       ) : view === 'list' ? (
-        <WorkoutList workouts={history} />
+        <WorkoutList workouts={plannedWorkouts} />
       ) : (
         <div className="text-gray-600 dark:text-gray-400 text-center p-8">
           Calendar view coming soon
         </div>
       )}
+      {error && <ErrorMessage message={error} />}
     </div>
   );
 }
