@@ -8,7 +8,7 @@
     "build:static": "cp next.config.prod.js next.config.js && next build && git checkout next.config.js",
     "start": "next start",
     "lint": "next lint",
-    "build:debug": "rm -rf docs .next out && NEXT_PUBLIC_BASE_PATH='/daily-focus' next build && npm run fix-css && mv out docs && ls -la docs/ && git add docs/ && git commit -m 'Update static build' && git push",
+    "build:debug": "rm -rf docs .next out && NEXT_PUBLIC_BASE_PATH='/daily-focus' next build && mkdir -p docs && cp -r out/* docs/ && node verify-paths.js && ls -la docs/ && git add docs/ && git commit -m 'Update static build' && git push",
     "fix-css": "mkdir -p out/_next/static/css && cp -r .next/static/* out/_next/static/"
   },
   "dependencies": {
