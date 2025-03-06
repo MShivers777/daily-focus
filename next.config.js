@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  distDir: 'docs', // Changed from outDir to distDir
+  // Remove distDir as it's not needed with output: 'export'
   images: {
     unoptimized: true,
   },

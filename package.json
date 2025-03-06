@@ -8,7 +8,7 @@
     "build:static": "cp next.config.prod.js next.config.js && next build && git checkout next.config.js",
     "start": "next start",
     "lint": "next lint",
-    "build:debug": "rm -rf docs .next && next build && mv out docs && ls -la docs/"
+    "build:debug": "rm -rf docs .next out && next build && ls -la out/ && git add out/ && git commit -m 'Update static build' && git push"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
