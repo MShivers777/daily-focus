@@ -1,12 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  outDir: 'docs', // Changed from distDir to outDir
+  distDir: 'docs', // Changed from outDir to distDir
   images: {
     unoptimized: true,
   },
-  basePath: '/daily-focus',
-  assetPrefix: '/daily-focus/',
+  basePath: process.env.NODE_ENV === 'production' ? '/daily-focus' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/daily-focus/' : '',
+  trailingSlash: true,
 };
 
 module.exports = nextConfig;
