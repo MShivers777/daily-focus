@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',  // Enable static exporting
-  basePath: '/daily-focus', // Your repository name
-  assetPrefix: '/daily-focus/', // Ensures assets are loaded relative to DB Pages URL
+  output: 'export',
+  outDir: 'docs', // Changed from distDir to outDir
   images: {
     unoptimized: true,
   },
+  basePath: '/daily-focus',
+  assetPrefix: '/daily-focus/',
 };
 
 module.exports = nextConfig;
