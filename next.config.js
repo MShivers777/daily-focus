@@ -1,13 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  // Remove distDir as it's not needed with output: 'export'
   images: {
     unoptimized: true,
   },
-  basePath: process.env.NODE_ENV === 'production' ? '/daily-focus' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/daily-focus/' : '',
+  basePath: '/daily-focus',
+  assetPrefix: '/daily-focus/',
   trailingSlash: true,
+  // Add this to ensure assets are loaded correctly
+  webpack: (config) => {
+    config.output.publicPath = '/daily-focus/_next/';
+    return config;
+  },
 };
 
 module.exports = nextConfig;
