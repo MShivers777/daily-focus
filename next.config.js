@@ -1,14 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  ...(process.env.NODE_ENV === 'production' ? {
-    output: 'export',
-    images: { unoptimized: true },
-    basePath: '/daily-focus',
-    assetPrefix: '/daily-focus/',
-  } : {
-    // Development config
-    images: { unoptimized: true },
-  })
-}
+  output: 'export',  // Enable static exporting
+  basePath: '/daily-focus', // Your repository name
+  assetPrefix: '/daily-focus/', // Ensures assets are loaded relative to DB Pages URL
+  images: {
+    unoptimized: true,
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
