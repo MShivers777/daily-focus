@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && mv out docs",
+    "build": "next build && npm run fix-css && mv out docs",
     "build:static": "cp next.config.prod.js next.config.js && next build && git checkout next.config.js",
     "start": "next start",
     "lint": "next lint",
-    "build:debug": "rm -rf docs .next out && next build && mv out docs && ls -la docs/ && git add docs/ && git commit -m 'Update static build' && git push"
+    "build:debug": "rm -rf docs .next out && next build && npm run fix-css && mv out docs && ls -la docs/ && git add docs/ && git commit -m 'Update static build' && git push",
+    "fix-css": "mkdir -p out/_next/static/css && cp .next/static/css/*.css out/_next/static/css/"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/react": "19.0.10",
+    "autoprefixer": "^10.4.20",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",
     "postcss": "^8",
