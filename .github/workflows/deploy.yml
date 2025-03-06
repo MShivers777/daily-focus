@@ -58,7 +58,7 @@ jobs:
           path: out
 
       - name: Wait for artifact processing
-        run: sleep 20
+        run: sleep 60
 
       - name: Deploy to GitHub Pages
         id: deployment
