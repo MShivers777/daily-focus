@@ -1,13 +1,10 @@
 'use client';
-import './globals.css';
-import DarkModeToggle from '../components/DarkModeToggle';
+
+import { Manrope } from 'next/font/google';
 import SettingsIcon from '../components/SettingsIcon';
 import { usePathname, useRouter } from 'next/navigation';
 
-export const metadata = {
-  title: 'Daily Focus Tracker',
-  description: 'Track your daily fitness and relationship goals',
-};
+const manrope = Manrope({ subsets: ['latin'] });
 
 export default function RootLayout({ children }) {
   const router = useRouter();
