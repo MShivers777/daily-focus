@@ -1,5 +1,8 @@
+'use client';
 import './globals.css';
 import DarkModeToggle from '../components/DarkModeToggle';
+import SettingsIcon from '../components/SettingsIcon';
+import { usePathname, useRouter } from 'next/navigation';
 
 export const metadata = {
   title: 'Daily Focus Tracker',
@@ -7,6 +10,9 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -32,6 +38,18 @@ export default function RootLayout({ children }) {
             } catch (_) {}
           `
         }} />
+        <div className="fixed top-4 right-16 z-50">
+          <button
+            onClick={() => router.push('/settings')}
+            className={`p-2 rounded-lg transition-all ${
+              pathname === '/settings'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <SettingsIcon />
+          </button>
+        </div>
         <div className="fixed top-4 right-4 z-50">
           <DarkModeToggle />
         </div>
