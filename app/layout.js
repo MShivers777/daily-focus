@@ -2,6 +2,7 @@
 
 import { Manrope } from 'next/font/google';
 import SettingsIcon from '../components/SettingsIcon';
+import DarkModeToggle from '../components/DarkModeToggle';
 import { usePathname, useRouter } from 'next/navigation';
 
 const manrope = Manrope({ subsets: ['latin'] });
