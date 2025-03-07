@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-const productionUrl = 'https://daily-focus-ashen.vercel.app'
+// Get site URL from environment or default to localhost
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL 
+  || process.env.NEXT_PUBLIC_VERCEL_URL 
+  || 'http://localhost:3000'
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -11,9 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    redirect_to: process.env.NODE_ENV === 'production' 
-      ? `${productionUrl}/auth/callback`
-      : 'http://localhost:3000/auth/callback'
+    redirect_to: `${siteUrl}/auth/callback`
   }
 })
 
