@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import BackIcon from '../../components/icons/BackIcon';
 import DailyMarriagePrompt from '../../components/DailyMarriagePrompt';
 import MarriageSchedule from '../../components/MarriageSchedule';
+import LinkedAccount from '../../components/LinkedAccount';
 
 export default function MarriagePage() {
   const router = useRouter();
@@ -30,6 +31,14 @@ export default function MarriagePage() {
               Today's Focus
             </h2>
             <DailyMarriagePrompt />
+          </div>
+
+          {/* Linked Account Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+              Linked Account
+            </h2>
+            <LinkedAccount />
           </div>
 
           {/* Schedule Card */}
