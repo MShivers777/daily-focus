@@ -9,6 +9,9 @@ import HydrationGuide from '../components/HydrationGuide';
 import ErrorMessage from '../components/ErrorMessage';
 import WorkoutConfirmation from '../components/WorkoutConfirmation';
 import WorkoutPlanner from '../components/WorkoutPlanner';
+import { useRouter } from 'next/navigation';
+import DailyMarriagePrompt from '../components/DailyMarriagePrompt';
+import WorkoutSummary from '../components/WorkoutSummary';
 
 export default function Home() {
   const [session, setSession] = useState(null);
@@ -42,6 +45,7 @@ export default function Home() {
   const [existingWorkout, setExistingWorkout] = useState(null);
   const [pendingWorkout, setPendingWorkout] = useState(null);
   const [activeTab, setActiveTab] = useState('tracker'); // Add this state
+  const router = useRouter();
 
   const handleSignInWithGoogle = async (response) => {
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -544,5 +548,55 @@ export default function Home() {
         error={saveError}
       />
     </>
+  );
+}
+
+export function Dashboard() {
+  const router = useRouter();
+
+  return (
+    <div className="space-y-8">
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+        Daily Focus
+      </h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Marriage Focus Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+            Marriage Focus
+          </h2>
+          <DailyMarriagePrompt />
+          <button
+            onClick={() => router.push('/marriage-prompts')}
+            className="mt-4 px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
+          >
+            View All Prompts
+          </button>
+        </div>
+
+        {/* Workout Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+            Workout Focus
+          </h2>
+          <WorkoutSummary />
+          <div className="flex space-x-4 mt-4">
+            <button
+              onClick={() => router.push('/add-workout')}
+              className="px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"
+            >
+              Add Workout
+            </button>
+            <button
+              onClick={() => router.push('/workout-prompts')}
+              className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
+            >
+              View Prompts
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
