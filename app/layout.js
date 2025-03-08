@@ -4,6 +4,7 @@ import { Manrope } from 'next/font/google';
 import SettingsIcon from '../components/SettingsIcon';
 import DarkModeToggle from '../components/DarkModeToggle';
 import { usePathname, useRouter } from 'next/navigation';
+import { Toaster } from 'react-hot-toast';
 import '../styles/globals.css';  // Make sure this import exists
 
 const manrope = Manrope({ subsets: ['latin'] });
@@ -24,6 +25,16 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={`min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 antialiased`}>
+        <Toaster 
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#333',
+              color: '#fff',
+            },
+          }}
+        />
         <script dangerouslySetInnerHTML={{
           __html: `
             try {

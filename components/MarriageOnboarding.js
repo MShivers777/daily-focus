@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const FOCUS_AREAS = [
   {
@@ -84,21 +85,34 @@ export default function MarriageOnboarding() {
 
   const handleSubmit = async () => {
     if (selectedPriorities.length !== 3) {
-      alert('Please select exactly 3 priority areas');
+      toast.error('Please select exactly 3 priority areas', {
+        duration: 3000,
+      });
       return;
     }
 
     try {
-      await fetch('/api/marriage-focus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          priorities: selectedPriorities,
+      await toast.promise(
+        fetch('/api/marriage-focus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            priorities: selectedPriorities,
+          }),
         }),
-      });
+        {
+          loading: 'Saving your preferences...',
+          success: 'Preferences saved successfully!',
+          error: 'Failed to save preferences.',
+        },
+        {
+          duration: 3000,
+        }
+      );
       router.push('/');
     } catch (error) {
       console.error('Error saving focus areas:', error);
+      toast.error('Failed to save preferences. Please try again.');
     }
   };
 
