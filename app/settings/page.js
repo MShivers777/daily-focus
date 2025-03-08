@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import BackIcon from '../../components/icons/BackIcon';
 import AccountNameSettings from '../../components/AccountNameSettings';
+import KidsSettings from '../../components/KidsSettings';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -27,6 +28,17 @@ export default function SettingsPage() {
                 Account Name
               </h2>
               <AccountNameSettings />
+            </div>
+
+            {/* Kids Setting Section */}
+            <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+                Do you have children?
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                This helps us customize relationship prompts for your family situation
+              </p>
+              <KidsSettings />
             </div>
 
             {/* Marriage Focus Section */}
