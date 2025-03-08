@@ -7,21 +7,30 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create a single instance
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: 'daily-focus-auth'  // Add a unique storage key
-  }
-});
+let supabaseInstance = null;
 
-// Prevent multiple instances in development
+function getSupabaseInstance() {
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'daily-focus-auth'
+    }
+  });
+
+  return supabaseInstance;
+}
+
+const supabase = getSupabaseInstance();
+
 if (process.env.NODE_ENV === 'development') {
   if ((globalThis).supabase) {
     console.warn('Reusing existing Supabase instance');
-    module.exports = (globalThis).supabase;
   } else {
     (globalThis).supabase = supabase;
   }

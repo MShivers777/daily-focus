@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import BackIcon from '../../components/icons/BackIcon';
-import DailyMarriagePrompt from '../../components/DailyMarriagePrompt';
+import MarriagePromptManager from '../../components/MarriagePromptManager';
 import MarriageSchedule from '../../components/MarriageSchedule';
 import LinkedAccount from '../../components/LinkedAccount';
 
@@ -30,7 +30,7 @@ export default function MarriagePage() {
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
               Today's Focus
             </h2>
-            <DailyMarriagePrompt />
+            <MarriagePromptManager />
           </div>
 
           {/* Linked Account Card */}
