@@ -17,6 +17,34 @@ export default function MarriageSchedule() {
       const startDate = new Date();
       const scheduleData = [];
 
+      // Get user's session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // First, fetch all available prompts for each topic
+      const { data: allPrompts } = await supabase
+        .from('marriage_prompts')
+        .select('topic_id, content, sequence_number')
+        .order('sequence_number');
+
+      // Group prompts by topic
+      const promptsByTopic = allPrompts.reduce((acc, prompt) => {
+        if (!acc[prompt.topic_id]) {
+          acc[prompt.topic_id] = [];
+        }
+        acc[prompt.topic_id].push(prompt);
+        return acc;
+      }, {});
+
+      // Get user's progress for each topic
+      const { data: progressData } = await supabase
+        .from('user_prompt_progress')
+        .select('topic_id, last_prompt_number');
+
+      const progressMap = new Map(
+        progressData?.map(p => [p.topic_id, p.last_prompt_number]) || []
+      );
+
       // Fetch schedule template with topic info
       const { data: templateData, error: templateError } = await supabase
         .from('marriage_schedule_template')
@@ -33,15 +61,6 @@ export default function MarriageSchedule() {
 
       if (templateError) throw templateError;
 
-      // Get user's progress for each topic
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data: progressData } = await supabase
-        .from('user_prompt_progress')
-        .select('topic_id, last_prompt_number')
-        .eq('user_id', session.user.id);
-
       // Generate next 14 days
       for (let i = 0; i < 14; i++) {
         const date = new Date(startDate);
@@ -56,29 +75,46 @@ export default function MarriageSchedule() {
         );
 
         if (scheduleItem) {
-          const topicProgress = progressData?.find(
-            p => p.topic_id === scheduleItem.marriage_topics.id
-          );
+          const topicId = scheduleItem.marriage_topics.id;
+          const topicPrompts = promptsByTopic[topicId] || [];
+          
+          if (topicPrompts.length > 0) {
+            // Get current progress for this topic
+            let lastPromptNumber = progressMap.get(topicId) || 0;
+            
+            // Calculate next prompt number (with wrapping)
+            const nextPromptNumber = lastPromptNumber >= topicPrompts.length ? 
+              1 : lastPromptNumber + 1;
 
-          const nextPromptNumber = (topicProgress?.last_prompt_number || 0) + 1;
+            // Find the prompt
+            const prompt = topicPrompts.find(p => p.sequence_number === nextPromptNumber);
 
-          // Fetch next prompt for this topic
-          const { data: promptData } = await supabase
-            .from('marriage_prompts')
-            .select('content, sequence_number')
-            .eq('topic_id', scheduleItem.marriage_topics.id)
-            .eq('sequence_number', nextPromptNumber)
-            .single();
+            if (prompt) {
+              // Update progress map for future days
+              progressMap.set(topicId, nextPromptNumber);
 
-          scheduleData.push({
-            date: date.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric' 
-            }),
-            day: date.toLocaleDateString('en-US', { weekday: 'long' }),
-            topic: scheduleItem.marriage_topics.name,
-            prompt: promptData?.content || 'No prompt available'
-          });
+              // If this is today, update the progress in the database
+              if (i === 0) {
+                await supabase
+                  .from('user_prompt_progress')
+                  .upsert({
+                    user_id: session.user.id,
+                    topic_id: topicId,
+                    last_prompt_number: nextPromptNumber
+                  });
+              }
+
+              scheduleData.push({
+                date: date.toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric' 
+                }),
+                day: date.toLocaleDateString('en-US', { weekday: 'long' }),
+                topic: scheduleItem.marriage_topics.name,
+                prompt: prompt.content
+              });
+            }
+          }
         }
       }
 
