@@ -1,0 +1,20 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}  spiritual_connection_rating?: number;  financial_harmony_rating?: number;  shared_goals_rating?: number;  emotional_support_rating?: number;  physical_intimacy_rating?: number;  quality_time_rating?: number;  communication_rating?: number;export interface DailyMarriageLog {}  spiritual_connection: boolean;  financial_harmony: boolean;  shared_goals: boolean;  emotional_support: boolean;  physical_intimacy: boolean;  quality_time: boolean;  communication: boolean;export interface MarriageFocus {
