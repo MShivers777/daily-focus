@@ -283,54 +283,47 @@ export default function Home() {
   };
 
   const fetchDailyMarriagePrompt = async () => {
-    console.log('Debugging marriage prompts table...');
-    
     try {
-      // Test connection and table access
-      const { data: debugData, error: debugError } = await supabase
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const weekNumber = Math.floor((today.getDate() - 1) / 7) % 2 + 1;
+
+      // Get scheduled topic
+      const { data: scheduleData } = await supabase
+        .from('marriage_schedule_template')
+        .select('topic_id, marriage_topics(identifier, name)')
+        .eq('day_of_week', dayOfWeek)
+        .eq('week_number', weekNumber)
+        .single();
+
+      if (!scheduleData) return;
+
+      // Get or create user progress
+      const { data: progress } = await supabase
+        .from('user_prompt_progress')
+        .select('last_prompt_number')
+        .eq('user_id', session.user.id)
+        .eq('topic_id', scheduleData.topic_id)
+        .single();
+
+      const currentPromptNumber = (progress?.last_prompt_number || 0) + 1;
+
+      // Get prompt
+      const { data: promptData } = await supabase
         .from('marriage_prompts')
-        .select('*');
+        .select('content')
+        .eq('topic_id', scheduleData.topic_id)
+        .eq('sequence_number', currentPromptNumber)
+        .single();
 
-      console.log('Query response:', {
-        hasError: !!debugError,
-        errorDetails: debugError,
-        dataLength: debugData?.length,
-        rawData: debugData
-      });
-      
-      if (debugError) {
-        throw debugError;
-      }
-
-      // If we have data, get today's or most recent prompt
-      if (debugData && debugData.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
-        console.log('Looking for date:', today);
-
-        // Find today's prompt or the most recent one
-        const todayPrompt = debugData.find(d => d.date === today);
-        const sortedPrompts = debugData.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        const selectedPrompt = todayPrompt || sortedPrompts[0];
-        
-        if (selectedPrompt) {
-          console.log('Selected prompt:', selectedPrompt);
-          setMarriagePrompt(selectedPrompt.prompt);
-        } else {
-          setMarriagePrompt('No prompt available');
-        }
+      if (promptData) {
+        setMarriagePrompt(`${scheduleData.marriage_topics.name}: ${promptData.content}`);
       } else {
-        console.log('No prompts found in database');
-        setMarriagePrompt('No prompts available');
+        setMarriagePrompt('No prompt available for today');
       }
     } catch (error) {
-      console.error('Error details:', {
-        message: error.message,
-        hint: error.hint,
-        details: error.details,
-        code: error.code
-      });
-      setMarriagePrompt('Unable to load prompt');
+      console.error('Error fetching marriage prompt:', error);
+      setMarriagePrompt('Unable to load today\'s marriage focus');
     }
   };
 

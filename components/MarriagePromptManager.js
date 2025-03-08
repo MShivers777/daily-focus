@@ -22,10 +22,16 @@ export default function MarriagePromptManager() {
       const dayOfWeek = today.getDay();
       const weekNumber = Math.floor(today.getDate() / 7) % 2 + 1;
 
-      // Get scheduled topic
+      // Get scheduled topic - update select to include name
       const { data: scheduleData } = await supabase
         .from('marriage_schedule_template')
-        .select('topic_id, marriage_topics(identifier)')
+        .select(`
+          topic_id, 
+          marriage_topics (
+            identifier,
+            name
+          )
+        `)
         .eq('day_of_week', dayOfWeek)
         .eq('week_number', weekNumber)
         .single();
@@ -60,8 +66,9 @@ export default function MarriagePromptManager() {
             last_prompt_number: promptData.sequence_number
           });
 
+        // Update to use the full name from marriage_topics
         setCurrentPrompt({
-          topic: scheduleData.marriage_topics.identifier,
+          topic: scheduleData.marriage_topics.name, // Use name instead of identifier
           content: promptData.content,
           promptNumber: promptData.sequence_number
         });
@@ -88,8 +95,8 @@ export default function MarriagePromptManager() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 capitalize">
-        {currentPrompt.topic.replace(/_/g, ' ')}
+      <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
+        {currentPrompt.topic}  {/* Remove the replace() formatting since we're using the full name */}
       </h3>
       <p className="text-gray-600 dark:text-gray-400">
         {currentPrompt.content}
