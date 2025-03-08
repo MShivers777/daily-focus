@@ -5,37 +5,87 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function DailyMarriagePrompt() {
   const [prompt, setPrompt] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
     const fetchTodaysPrompt = async () => {
-      const { data: focusAreas } = await supabase
-        .from('marriage_focus')
-        .select('*')
-        .single();
-
-      if (focusAreas) {
-        // Get active focus areas
-        const activeAreas = Object.entries(focusAreas)
-          .filter(([key, value]) => value === true && key !== 'user_id' && key !== 'id')
-          .map(([key]) => key);
-
-        // Get a random prompt for one of the active areas
-        if (activeAreas.length > 0) {
-          const randomArea = activeAreas[Math.floor(Math.random() * activeAreas.length)];
-          setPrompt({
-            area: randomArea.replace(/_/g, ' '),
-            text: getPromptForArea(randomArea)
-          });
+      try {
+        setIsLoading(true);
+        
+        // Wait for session to be available
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          return;
         }
+
+        if (!session) {
+          // Wait a bit and try again
+          setTimeout(fetchTodaysPrompt, 1000);
+          return;
+        }
+
+        // Get user's focus areas
+        const { data: focusAreas, error: focusError } = await supabase
+          .from('marriage_focus')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (focusError) {
+          console.error('Error fetching focus areas:', focusError);
+          return;
+        }
+
+        if (focusAreas) {
+          const activeAreas = Object.entries(focusAreas)
+            .filter(([key, value]) => 
+              value === true && 
+              !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
+            )
+            .map(([key]) => key);
+
+          if (activeAreas.length > 0) {
+            const randomArea = activeAreas[Math.floor(Math.random() * activeAreas.length)];
+            setPrompt({
+              area: randomArea.replace(/_/g, ' '),
+              text: getPromptForArea(randomArea)
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error in fetchTodaysPrompt:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchTodaysPrompt();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchTodaysPrompt();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  if (!prompt) {
+  if (isLoading) {
     return <div className="animate-pulse h-20 bg-gray-200 dark:bg-gray-700 rounded-lg" />;
+  }
+
+  if (!prompt) {
+    return (
+      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg">
+        <p className="text-yellow-800 dark:text-yellow-200">
+          No focus areas selected. Please visit settings to configure your marriage focus areas.
+        </p>
+      </div>
+    );
   }
 
   return (
