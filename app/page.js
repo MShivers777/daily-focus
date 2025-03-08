@@ -563,36 +563,46 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Marriage Focus Section */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-            Marriage Focus
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+              Marriage Focus
+            </h2>
+            <button
+              onClick={() => router.push('/marriage-prompts')}
+              className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              View All Prompts →
+            </button>
+          </div>
           <DailyMarriagePrompt />
-          <button
-            onClick={() => router.push('/marriage-prompts')}
-            className="mt-4 px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
-          >
-            View All Prompts
-          </button>
         </div>
 
         {/* Workout Section */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-            Workout Focus
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+              Workout Focus
+            </h2>
+            <button
+              onClick={() => router.push('/workout-prompts')}
+              className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              View All Workouts →
+            </button>
+          </div>
           <WorkoutSummary />
-          <div className="flex space-x-4 mt-4">
+          <div className="flex space-x-4 mt-6">
             <button
               onClick={() => router.push('/add-workout')}
-              className="px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"
+              className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all text-sm"
             >
               Add Workout
             </button>
             <button
-              onClick={() => router.push('/workout-prompts')}
-              className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
+              onClick={() => router.push('/workout-history')}
+              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all text-sm"
             >
-              View Prompts
+              View History
             </button>
           </div>
         </div>
