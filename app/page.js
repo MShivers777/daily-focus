@@ -14,6 +14,7 @@ import WorkoutPlanner from '../components/WorkoutPlanner';
 export default function Home() {
   const router = useRouter();
   const [session, setSession] = useState(null);
+  const [userName, setUserName] = useState('');
   const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);  // default to today
   const [strengthVolume, setStrengthVolume] = useState('');
   const [cardioLoad, setCardioLoad] = useState('');
@@ -93,10 +94,30 @@ export default function Home() {
   // Only fetch data if we have a session
   useEffect(() => {
     if (session) {
+      fetchUserName();
       fetchHistory();
       fetchDailyMarriagePrompt();
     }
   }, [session]);
+
+  const fetchUserName = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('custom_name')
+        .eq('id', session.user.id)
+        .single();
+
+      const name = profile?.custom_name || 
+                   session.user.user_metadata?.full_name || 
+                   session.user.email?.split('@')[0] ||
+                   'Friend';
+      
+      setUserName(name);
+    } catch (error) {
+      console.error('Error fetching user name:', error);
+    }
+  };
 
   const fetchHistory = async () => {
     try {
@@ -362,6 +383,9 @@ export default function Home() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
             <div>
+              <p className="text-gray-600 dark:text-gray-400 mb-1">
+                Welcome, {userName}
+              </p>
               <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Daily Focus Tracker</h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">{dateString}</p>
             </div>

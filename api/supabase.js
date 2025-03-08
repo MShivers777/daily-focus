@@ -1,29 +1,30 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Get site URL from environment or default to localhost
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL 
-  || process.env.NEXT_PUBLIC_VERCEL_URL 
-  || 'http://localhost:3000'
-
-// Ensure URL has https:// prefix
-const getRedirectTo = (url) => {
-  if (!url.startsWith('http')) {
-    return `https://${url}/auth/callback`
-  }
-  return `${url}/auth/callback`
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
+// Create a single instance
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'pkce',
-    redirect_to: getRedirectTo(siteUrl)
+    storageKey: 'daily-focus-auth'  // Add a unique storage key
   }
-})
+});
 
-export default supabase
+// Prevent multiple instances in development
+if (process.env.NODE_ENV === 'development') {
+  if ((globalThis).supabase) {
+    console.warn('Reusing existing Supabase instance');
+    module.exports = (globalThis).supabase;
+  } else {
+    (globalThis).supabase = supabase;
+  }
+}
+
+export default supabase;

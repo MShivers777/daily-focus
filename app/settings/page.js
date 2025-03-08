@@ -1,7 +1,8 @@
 'use client';
+
 import { useRouter } from 'next/navigation';
-import MarriageOnboarding from '../../components/MarriageOnboarding';
 import BackIcon from '../../components/icons/BackIcon';
+import AccountNameSettings from '../../components/AccountNameSettings';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -18,7 +19,17 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Settings</h1>
+          
           <div className="space-y-6">
+            {/* Account Name Section */}
+            <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+                Account Name
+              </h2>
+              <AccountNameSettings />
+            </div>
+
+            {/* Marriage Focus Section */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
                 Marriage Focus Areas
