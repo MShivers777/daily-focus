@@ -4,6 +4,7 @@ import { Manrope } from 'next/font/google';
 import SettingsIcon from '../components/SettingsIcon';
 import DarkModeToggle from '../components/DarkModeToggle';
 import { usePathname, useRouter } from 'next/navigation';
+import '../styles/globals.css';  // Make sure this import exists
 
 const manrope = Manrope({ subsets: ['latin'] });
 
@@ -12,7 +13,7 @@ export default function RootLayout({ children }) {
   const pathname = usePathname();
   
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={manrope.className}>
       <head>
         <script 
           src="https://accounts.google.com/gsi/client" 
@@ -22,7 +23,7 @@ export default function RootLayout({ children }) {
         />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <body className={`min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200 antialiased`}>
         <script dangerouslySetInnerHTML={{
           __html: `
             try {
@@ -36,24 +37,24 @@ export default function RootLayout({ children }) {
             } catch (_) {}
           `
         }} />
-        <div className="fixed top-4 right-16 z-50">
-          <button
-            onClick={() => router.push('/settings')}
-            className={`p-2 rounded-lg transition-all ${
-              pathname === '/settings'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <SettingsIcon />
-          </button>
+        <div className="relative min-h-screen">
+          <nav className="fixed top-0 right-0 p-4 flex items-center gap-4 z-50">
+            <button
+              onClick={() => router.push('/settings')}
+              className={`p-2 rounded-lg transition-all ${
+                pathname === '/settings'
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              <SettingsIcon />
+            </button>
+            <DarkModeToggle />
+          </nav>
+          <main className="container mx-auto px-4 py-20 max-w-4xl">
+            {children}
+          </main>
         </div>
-        <div className="fixed top-4 right-4 z-50">
-          <DarkModeToggle />
-        </div>
-        <main className="container mx-auto py-8">
-          {children}
-        </main>
       </body>
     </html>
   );
