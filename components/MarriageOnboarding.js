@@ -4,16 +4,66 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const FOCUS_AREAS = [
-  'Communication',
-  'Quality Time',
-  'Physical Intimacy',
-  'Emotional Support',
-  'Shared Goals',
-  'Financial Harmony',
-  'Spiritual Connection',
-  'Personal Growth',
-  'Family Planning',
-  'Conflict Resolution'
+  {
+    id: 'effective_communication',
+    title: 'Effective Communication',
+    description: 'Open, honest, and clear exchange of thoughts and feelings'
+  },
+  {
+    id: 'emotional_connection',
+    title: 'Emotional Connection',
+    description: 'Deep understanding and sharing of feelings and experiences'
+  },
+  {
+    id: 'financial_unity',
+    title: 'Financial Unity',
+    description: 'Aligned financial goals and shared resource management'
+  },
+  {
+    id: 'quality_time',
+    title: 'Quality Time and Activities Together',
+    description: 'Meaningful shared experiences and dedicated couple time'
+  },
+  {
+    id: 'physical_intimacy',
+    title: 'Physical Intimacy',
+    description: 'Physical closeness, affection, and intimate connection'
+  },
+  {
+    id: 'shared_values',
+    title: 'Shared Values and Goals',
+    description: 'Alignment on life direction and core beliefs'
+  },
+  {
+    id: 'mutual_respect',
+    title: 'Mutual Respect and Support',
+    description: 'Honoring each other\'s individuality and offering encouragement'
+  },
+  {
+    id: 'shared_responsibilities',
+    title: 'Shared Responsibilities',
+    description: 'Balanced partnership in managing home and life together'
+  },
+  {
+    id: 'community_connection',
+    title: 'Connection to Community',
+    description: 'Shared social relationships and community involvement'
+  },
+  {
+    id: 'adaptability',
+    title: 'Adaptability and Flexibility',
+    description: 'Growing and adapting together through life\'s changes'
+  },
+  {
+    id: 'forgiveness',
+    title: 'Forgiveness and Grace',
+    description: 'Ability to work through conflicts and extend grace'
+  },
+  {
+    id: 'spiritual_connection',
+    title: 'Spiritual Connection',
+    description: 'Shared faith practices and spiritual growth together'
+  }
 ];
 
 export default function MarriageOnboarding() {
@@ -63,18 +113,25 @@ export default function MarriageOnboarding() {
           Choose the three areas that you want to prioritize in your marriage.
         </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {FOCUS_AREAS.map((area) => (
             <button
-              key={area}
-              onClick={() => handleAreaClick(area)}
+              key={area.id}
+              onClick={() => handleAreaClick(area.id)}
               className={`p-4 rounded-lg text-left transition-all ${
-                selectedPriorities.includes(area)
+                selectedPriorities.includes(area.id)
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              {area}
+              <h3 className="font-semibold mb-1">{area.title}</h3>
+              <p className={`text-sm ${
+                selectedPriorities.includes(area.id)
+                  ? 'text-blue-100'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}>
+                {area.description}
+              </p>
             </button>
           ))}
         </div>

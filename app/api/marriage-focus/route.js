@@ -15,16 +15,18 @@ export async function POST(request) {
     .from('marriage_focus')
     .upsert({
       user_id: user.id,
-      communication: priorities.includes('Communication'),
-      quality_time: priorities.includes('Quality Time'),
-      physical_intimacy: priorities.includes('Physical Intimacy'),
-      emotional_support: priorities.includes('Emotional Support'),
-      shared_goals: priorities.includes('Shared Goals'),
-      financial_harmony: priorities.includes('Financial Harmony'),
-      spiritual_connection: priorities.includes('Spiritual Connection'),
-      personal_growth: priorities.includes('Personal Growth'),
-      family_planning: priorities.includes('Family Planning'),
-      conflict_resolution: priorities.includes('Conflict Resolution'),
+      effective_communication: priorities.includes('effective_communication'),
+      emotional_connection: priorities.includes('emotional_connection'),
+      financial_unity: priorities.includes('financial_unity'),
+      quality_time: priorities.includes('quality_time'),
+      physical_intimacy: priorities.includes('physical_intimacy'),
+      shared_values: priorities.includes('shared_values'),
+      mutual_respect: priorities.includes('mutual_respect'),
+      shared_responsibilities: priorities.includes('shared_responsibilities'),
+      community_connection: priorities.includes('community_connection'),
+      adaptability: priorities.includes('adaptability'),
+      forgiveness: priorities.includes('forgiveness'),
+      spiritual_connection: priorities.includes('spiritual_connection')
     });
 
   if (error) {
