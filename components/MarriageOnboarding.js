@@ -1,116 +1,98 @@
 'use client';
+
 import { useState } from 'react';
-import { MARRIAGE_CATEGORIES } from '../constants/marriageCategories';
+import { useRouter } from 'next/navigation';
 
-export default function MarriageOnboarding({ onComplete }) {
-  const [step, setStep] = useState(1);
-  const [priorities, setPriorities] = useState([]);
-  const [additional, setAdditional] = useState([]);
+const FOCUS_AREAS = [
+  'Communication',
+  'Quality Time',
+  'Physical Intimacy',
+  'Emotional Support',
+  'Shared Goals',
+  'Financial Harmony',
+  'Spiritual Connection',
+  'Personal Growth',
+  'Family Planning',
+  'Conflict Resolution'
+];
 
-  const handlePrioritySelect = (categoryId) => {
-    if (priorities.includes(categoryId)) {
-      setPriorities(priorities.filter(id => id !== categoryId));
-    } else if (priorities.length < 3) {
-      setPriorities([...priorities, categoryId]);
+export default function MarriageOnboarding() {
+  const [selectedPriorities, setSelectedPriorities] = useState([]);
+  const router = useRouter();
+
+  const handleAreaClick = (area) => {
+    setSelectedPriorities(prev => {
+      if (prev.includes(area)) {
+        return prev.filter(a => a !== area);
+      }
+      if (prev.length >= 3) {
+        return prev;
+      }
+      return [...prev, area];
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (selectedPriorities.length !== 3) {
+      alert('Please select exactly 3 priority areas');
+      return;
+    }
+
+    try {
+      await fetch('/api/marriage-focus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priorities: selectedPriorities,
+        }),
+      });
+      router.push('/');
+    } catch (error) {
+      console.error('Error saving focus areas:', error);
     }
   };
 
-  const handleAdditionalSelect = (categoryId) => {
-    if (additional.includes(categoryId)) {
-      setAdditional(additional.filter(id => id !== categoryId));
-    } else {
-      setAdditional([...additional, categoryId]);
-    }
-  };
-
-  const handleComplete = async () => {
-    // Save to Supabase here
-    const selections = {
-      priorities,
-      additional,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Call parent completion handler
-    onComplete(selections);
-  };
-
-  if (step === 1) {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          Select Your Top 3 Priority Areas
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Choose three areas that you feel need the most focus in your marriage.
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+          Select Your Top 3 Marriage Focus Areas
+        </h1>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          Choose the three areas that you want to prioritize in your marriage.
         </p>
-        <div className="grid gap-4 md:grid-cols-2">
-          {MARRIAGE_CATEGORIES.map(category => (
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+          {FOCUS_AREAS.map((area) => (
             <button
-              key={category.id}
-              onClick={() => handlePrioritySelect(category.id)}
-              className={`p-4 rounded-lg border transition-all ${
-                priorities.includes(category.id)
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
+              key={area}
+              onClick={() => handleAreaClick(area)}
+              className={`p-4 rounded-lg text-left transition-all ${
+                selectedPriorities.includes(area)
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              <h3 className="font-medium text-gray-900 dark:text-white">
-                {category.title}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {category.description}
-              </p>
+              {area}
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setStep(2)}
-          disabled={priorities.length !== 3}
-          className="w-full p-3 bg-blue-500 text-white rounded-lg disabled:opacity-50"
-        >
-          Continue
-        </button>
-      </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-        Select Additional Focus Areas
-      </h2>
-      <p className="text-gray-600 dark:text-gray-400">
-        Choose any other areas you'd like to include in your marriage focus rotation.
-      </p>
-      <div className="grid gap-4 md:grid-cols-2">
-        {MARRIAGE_CATEGORIES
-          .filter(category => !priorities.includes(category.id))
-          .map(category => (
-            <button
-              key={category.id}
-              onClick={() => handleAdditionalSelect(category.id)}
-              className={`p-4 rounded-lg border transition-all ${
-                additional.includes(category.id)
-                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
-            >
-              <h3 className="font-medium text-gray-900 dark:text-white">
-                {category.title}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {category.description}
-              </p>
-            </button>
-          ))}
+        <div className="flex justify-end">
+          <button
+            onClick={handleSubmit}
+            disabled={selectedPriorities.length !== 3}
+            className={`px-6 py-2 rounded-lg transition-all ${
+              selectedPriorities.length === 3
+                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Continue
+          </button>
+        </div>
       </div>
-      <button
-        onClick={handleComplete}
-        className="w-full p-3 bg-blue-500 text-white rounded-lg"
-      >
-        Complete Setup
-      </button>
     </div>
   );
 }
