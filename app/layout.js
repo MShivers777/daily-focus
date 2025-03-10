@@ -6,6 +6,7 @@ import DarkModeToggle from '../components/DarkModeToggle';
 import { usePathname, useRouter } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import '../styles/globals.css';  // Make sure this import exists
+import HelpButton from '../components/HelpButton';
 
 const manrope = Manrope({ subsets: ['latin'] });
 
@@ -65,6 +66,7 @@ export default function RootLayout({ children }) {
           <main className="container mx-auto px-4 py-20 max-w-4xl">
             {children}
           </main>
+          <HelpButton />
         </div>
       </body>
     </html>
