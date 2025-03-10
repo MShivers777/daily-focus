@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
+import supabase from '../api/supabase';
 import WorkoutList from './WorkoutList';
 import WorkoutPlanForm from './WorkoutPlanForm';
-import { createPlannedWorkout, getPlannedWorkouts } from '../services/plannedWorkouts';
 import ErrorMessage from './ErrorMessage';
 
-export default function WorkoutPlanner({ session }) {
+export default function WorkoutPlanner() {
   const [view, setView] = useState('list');
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
@@ -16,17 +16,30 @@ export default function WorkoutPlanner({ session }) {
     loadPlannedWorkouts();
   }, []);
 
-  async function loadPlannedWorkouts() {
+  const loadPlannedWorkouts = async () => {
     try {
-      const data = await getPlannedWorkouts(session.user.id);
-      setPlannedWorkouts(data);
-    } catch (err) {
-      setError('Failed to load planned workouts');
-      console.error(err);
+      setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error('No session found');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('planned_workouts')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('planned_date');
+
+      if (error) throw error;
+      setPlannedWorkouts(data || []);
+    } catch (error) {
+      console.error('Error loading planned workouts:', error);
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   const handlePlanWorkout = async (planData) => {
     try {
@@ -44,7 +57,7 @@ export default function WorkoutPlanner({ session }) {
   };
 
   if (isLoading) {
-    return <div>Loading planned workouts...</div>;
+    return <div className="animate-pulse h-20 bg-gray-200 dark:bg-gray-700 rounded-lg" />;
   }
 
   return (
