@@ -8,6 +8,7 @@ import LoadRatiosHeader from './LoadRatiosHeader';
 import ErrorMessage from './ErrorMessage';
 import WorkoutConfirmation from './WorkoutConfirmation';
 import HydrationGuide from './HydrationGuide';
+import WorkoutHistoryItem from './WorkoutHistoryItem';
 
 export default function WorkoutTracker() {
   const [workoutDate, setWorkoutDate] = useState(() => {
@@ -213,6 +214,15 @@ export default function WorkoutTracker() {
     }
   };
 
+  const handleEditWorkout = (workout) => {
+    setExistingWorkout(workout);
+    setWorkoutDate(workout.workout_date);
+    setStrengthVolume(workout.strength_volume.toString());
+    setCardioLoad(workout.cardio_load.toString());
+    setNote(workout.note || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column */}
@@ -301,24 +311,17 @@ export default function WorkoutTracker() {
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Recent History</h2>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {history.map((entry) => (
-              <div key={entry.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm font-medium text-gray-800 dark:text-white">
-                  {entry.workout_date} - Week {entry.training_cycle_week}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Goal: {entry.training_cycle_goal}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Strength: {entry.strength_volume} lbs
-                  <span className="mx-2">•</span>
-                  Cardio: {entry.cardio_load}
-                </p>
-                {entry.note && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
-                    {entry.note}
-                  </p>
-                )}
-              </div>
+              <WorkoutHistoryItem 
+                key={entry.id}
+                entry={entry}
+                onUpdate={(workout) => {
+                  if (workout) {
+                    handleEditWorkout(workout);
+                  } else {
+                    fetchHistory();
+                  }
+                }}
+              />
             ))}
           </div>
         </div>
