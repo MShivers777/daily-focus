@@ -102,6 +102,26 @@ export default function CalendarView({ workoutHistory = [] }) {  // Add default 
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
   };
 
+  const WorkoutTooltip = ({ workout }) => (
+    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+      <div className="text-sm font-medium mb-1">
+        {workout.workout_date ? 'Completed Workout' : 'Planned Workout'}
+      </div>
+      {workout.strength_volume > 0 && (
+        <div>Strength: {workout.strength_volume} lbs</div>
+      )}
+      {workout.cardio_load > 0 && (
+        <div>Cardio: {workout.cardio_load}</div>
+      )}
+      {workout.note && (
+        <div className="mt-1 text-gray-300">{workout.note}</div>
+      )}
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+        <div className="border-8 border-transparent border-t-gray-800"></div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
       <div className="flex justify-between items-center mb-6">
@@ -135,7 +155,7 @@ export default function CalendarView({ workoutHistory = [] }) {  // Add default 
           <div 
             key={index}
             className={`
-              aspect-square p-2 border border-gray-200 dark:border-gray-700 rounded-lg
+              aspect-square p-2 border border-gray-200 dark:border-gray-700 rounded-lg relative
               ${date ? 'hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'}
             `}
           >
@@ -147,13 +167,35 @@ export default function CalendarView({ workoutHistory = [] }) {  // Add default 
                 {getWorkoutsForDate(date).map((workout, i) => (
                   <div 
                     key={i}
-                    className={`
-                      text-xs p-1 mt-1 rounded
-                      ${workout.workout_date ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 
-                       'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'}
-                    `}
+                    className="relative group"
                   >
-                    {workout.workout_date ? '✓ Completed' : '○ Planned'}
+                    <div className={`
+                      text-xs mt-1 rounded flex flex-col gap-0.5
+                      ${workout.workout_date ? 'text-green-800 dark:text-green-200' : 
+                       'text-blue-800 dark:text-blue-200'}
+                    `}>
+                      {workout.strength_volume > 0 && (
+                        <span className={`
+                          px-1 py-0.5 rounded
+                          ${workout.workout_date ? 'bg-green-100 dark:bg-green-900' : 
+                           'bg-blue-100 dark:bg-blue-900'}
+                        `}>
+                          💪 {workout.strength_volume}
+                        </span>
+                      )}
+                      {workout.cardio_load > 0 && (
+                        <span className={`
+                          px-1 py-0.5 rounded
+                          ${workout.workout_date ? 'bg-green-100 dark:bg-green-900' : 
+                           'bg-blue-100 dark:bg-blue-900'}
+                        `}>
+                          ❤️ {workout.cardio_load}
+                        </span>
+                      )}
+                    </div>
+                    <div className="hidden group-hover:block">
+                      <WorkoutTooltip workout={workout} />
+                    </div>
                   </div>
                 ))}
               </>
