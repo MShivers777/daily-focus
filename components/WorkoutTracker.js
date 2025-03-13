@@ -10,7 +10,14 @@ import WorkoutConfirmation from './WorkoutConfirmation';
 import HydrationGuide from './HydrationGuide';
 
 export default function WorkoutTracker() {
-  const [workoutDate, setWorkoutDate] = useState(new Date().toISOString().split('T')[0]);
+  const [workoutDate, setWorkoutDate] = useState(() => {
+    // Get today's date in YYYY-MM-DD format in local timezone
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [strengthVolume, setStrengthVolume] = useState('');
   const [cardioLoad, setCardioLoad] = useState('');
   const [note, setNote] = useState('');
