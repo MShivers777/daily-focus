@@ -66,19 +66,45 @@ export default function WorkoutTracker() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
     
-    const formattedData = {
-      workout_date: workoutDate,
-      strength_volume: parseInt(strengthVolume) || 0,
-      cardio_load: parseInt(cardioLoad) || 0,
-      note: note,
-      user_id: session.user.id,
-      created_at: new Date().toISOString()
-    };
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const formattedData = {
+        workout_date: workoutDate,
+        strength_volume: parseInt(strengthVolume) || 0,
+        cardio_load: parseInt(cardioLoad) || 0,
+        note: note,
+        user_id: session.user.id,
+        created_at: new Date().toISOString()
+      };
 
-    // ...copy the rest of handleSubmit logic...
+      // Check for existing workout
+      const { data: existingData, error: checkError } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('workout_date', workoutDate)
+        .eq('user_id', session.user.id);
+
+      if (checkError) {
+        console.error('Error checking existing workout:', checkError);
+        return;
+      }
+
+      if (existingData && existingData.length > 0) {
+        setExistingWorkout(existingData[0]);
+        setPendingWorkout(formattedData);
+        setShowWorkoutConfirm(true);
+        return;
+      }
+
+      await saveWorkout(formattedData);
+
+    } catch (error) {
+      console.error('Error submitting workout:', error);
+      toast.error('Failed to save workout');
+    }
   };
 
   const handleEdit = () => {
