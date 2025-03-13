@@ -4,6 +4,7 @@ import supabase from '../api/supabase';
 import WorkoutList from './WorkoutList';
 import WorkoutPlanForm from './WorkoutPlanForm';
 import ErrorMessage from './ErrorMessage';
+import CalendarView from './CalendarView';
 
 export default function WorkoutPlanner() {
   const [view, setView] = useState('list');
@@ -11,9 +12,11 @@ export default function WorkoutPlanner() {
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [history, setHistory] = useState([]);  // Add this state
 
   useEffect(() => {
     loadPlannedWorkouts();
+    loadWorkoutHistory();
   }, []);
 
   const loadPlannedWorkouts = async () => {
@@ -38,6 +41,23 @@ export default function WorkoutPlanner() {
       console.error('Error loading planned workouts:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadWorkoutHistory = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('workout_date', { ascending: false });
+
+      setHistory(data || []);
+    } catch (error) {
+      console.error('Error loading workout history:', error);
     }
   };
 
@@ -114,9 +134,7 @@ export default function WorkoutPlanner() {
       ) : view === 'list' ? (
         <WorkoutList workouts={plannedWorkouts} />
       ) : (
-        <div className="text-gray-600 dark:text-gray-400 text-center p-8">
-          Calendar view coming soon
-        </div>
+        <CalendarView workoutHistory={history} />
       )}
       {error && <ErrorMessage message={error} />}
     </div>

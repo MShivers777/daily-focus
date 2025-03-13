@@ -13,15 +13,15 @@ const WEEKDAYS = [
 
 export default function WorkoutPlanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    strengthVolume: '',
-    cardioLoad: '',
+    start_date: new Date().toISOString().split('T')[0],
+    strength_volume: '',
+    cardio_load: '',
     note: '',
     recurrence: 'once',
-    customDays: WEEKDAYS.reduce((acc, day) => ({ ...acc, [day.id]: false }), {}),
-    endType: 'never',
-    endAfter: 1,
-    endDate: ''
+    custom_days: [],
+    end_type: 'never',
+    end_after: '',
+    end_date: ''
   });
 
   const handleChange = (field, value) => {
@@ -33,7 +33,14 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      strength_volume: parseInt(formData.strength_volume) || null,
+      cardio_load: parseInt(formData.cardio_load) || null,
+      custom_days: formData.recurrence === 'custom' ? formData.custom_days : null,
+      end_after: formData.end_type === 'after' ? parseInt(formData.end_after) : null,
+      end_date: formData.end_type === 'on_date' ? formData.end_date : null
+    });
   };
 
   return (
@@ -42,22 +49,22 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
       <div className="space-y-4">
         <input
           type="date"
-          value={formData.startDate}
-          onChange={(e) => handleChange('startDate', e.target.value)}
+          value={formData.start_date}
+          onChange={(e) => handleChange('start_date', e.target.value)}
           className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
         />
         <input
           type="number"
           placeholder="Strength Volume (lbs)"
-          value={formData.strengthVolume}
-          onChange={(e) => handleChange('strengthVolume', e.target.value)}
+          value={formData.strength_volume}
+          onChange={(e) => handleChange('strength_volume', e.target.value)}
           className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
         />
         <input
           type="number"
           placeholder="Cardio Load"
-          value={formData.cardioLoad}
-          onChange={(e) => handleChange('cardioLoad', e.target.value)}
+          value={formData.cardio_load}
+          onChange={(e) => handleChange('cardio_load', e.target.value)}
           className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
         />
         <textarea
@@ -94,12 +101,12 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
               <button
                 key={day.id}
                 type="button"
-                onClick={() => handleChange('customDays', {
-                  ...formData.customDays,
-                  [day.id]: !formData.customDays[day.id]
+                onClick={() => handleChange('custom_days', {
+                  ...formData.custom_days,
+                  [day.id]: !formData.custom_days[day.id]
                 })}
                 className={`px-3 py-2 rounded ${
-                  formData.customDays[day.id]
+                  formData.custom_days[day.id]
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-700'
                 }`}
@@ -117,9 +124,9 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
               <button
                 key={type}
                 type="button"
-                onClick={() => handleChange('endType', type)}
+                onClick={() => handleChange('end_type', type)}
                 className={`px-3 py-2 rounded ${
-                  formData.endType === type
+                  formData.end_type === type
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-700'
                 }`}
@@ -129,22 +136,22 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
             ))}
           </div>
 
-          {formData.endType === 'after' && (
+          {formData.end_type === 'after' && (
             <input
               type="number"
               min="1"
-              value={formData.endAfter}
-              onChange={(e) => handleChange('endAfter', parseInt(e.target.value))}
+              value={formData.end_after}
+              onChange={(e) => handleChange('end_after', parseInt(e.target.value))}
               className="w-full p-2 border rounded"
               placeholder="Number of occurrences"
             />
           )}
 
-          {formData.endType === 'on' && (
+          {formData.end_type === 'on' && (
             <input
               type="date"
-              value={formData.endDate}
-              onChange={(e) => handleChange('endDate', e.target.value)}
+              value={formData.end_date}
+              onChange={(e) => handleChange('end_date', e.target.value)}
               className="w-full p-2 border rounded"
             />
           )}
