@@ -28,6 +28,15 @@ const CARDIO_TYPES = [
   { id: 'custom', label: 'Custom' }
 ];
 
+const STRENGTH_TYPES = [
+  { id: 'squats', label: 'Squats' },
+  { id: 'deadlifts', label: 'Deadlifts' },
+  { id: 'a_workout', label: 'A' },
+  { id: 'b_workout', label: 'B' },
+  { id: 'core', label: 'Core' },
+  { id: 'custom', label: 'Custom' }
+];
+
 export default function WorkoutPlanForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     workoutType: '',
@@ -45,6 +54,10 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
       warmupDuration: '',
       includeCooldown: false,
       cooldownDuration: ''
+    },
+    strength: {
+      type: '',
+      customType: ''
     },
     note: '',
     start_date: new Date().toISOString().split('T')[0],
@@ -68,6 +81,16 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
       ...prev,
       cardio: {
         ...prev.cardio,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleStrengthChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      strength: {
+        ...prev.strength,
         [field]: value
       }
     }));
@@ -125,6 +148,33 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
       {/* Strength Section */}
       {(formData.workoutType === 'strength' || formData.workoutType === 'both') && (
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {STRENGTH_TYPES.map(type => (
+              <button
+                key={type.id}
+                type="button"
+                onClick={() => handleStrengthChange('type', type.id)}
+                className={`px-3 py-2 rounded ${
+                  formData.strength.type === type.id
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
+
+          {formData.strength.type === 'custom' && (
+            <input
+              type="text"
+              value={formData.strength.customType}
+              onChange={(e) => handleStrengthChange('customType', e.target.value)}
+              placeholder="Enter custom strength workout type"
+              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
+            />
+          )}
+
           <input
             type="number"
             placeholder="Strength Volume (lbs)"

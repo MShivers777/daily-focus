@@ -25,6 +25,14 @@ export default function WorkoutList({ workouts }) {
                       workout.cardio.type}
                   </p>
                 )}
+                {workout.workoutType === 'strength' && workout.strength?.type && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Strength: {workout.strength.type === 'custom' ? 
+                      workout.strength.customType : 
+                      workout.strength.type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    {workout.strength_volume && ` - ${workout.strength_volume} lbs`}
+                  </p>
+                )}
                 {workout.strength_volume > 0 && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     Strength: {workout.strength_volume} lbs
