@@ -9,8 +9,10 @@ import ErrorMessage from './ErrorMessage';
 import WorkoutConfirmation from './WorkoutConfirmation';
 import HydrationGuide from './HydrationGuide';
 import WorkoutHistoryItem from './WorkoutHistoryItem';
+import { useRouter } from 'next/navigation';
 
 export default function WorkoutTracker() {
+  const router = useRouter();
   const [workoutDate, setWorkoutDate] = useState(() => {
     // Get today's date in YYYY-MM-DD format in local timezone
     const today = new Date();
@@ -223,6 +225,10 @@ export default function WorkoutTracker() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleHistoryDoubleClick = () => {
+    router.push('/workouts/history');
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column */}
@@ -307,8 +313,16 @@ export default function WorkoutTracker() {
         </div>
 
         {/* History Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Recent History</h2>
+        <div 
+          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm cursor-pointer"
+          onDoubleClick={handleHistoryDoubleClick}
+        >
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+            Recent History
+            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+              (double-click for full history)
+            </span>
+          </h2>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {history.map((entry) => (
               <WorkoutHistoryItem 

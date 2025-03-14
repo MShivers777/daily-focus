@@ -101,6 +101,12 @@ export default function WorkoutPlanner() {
         </h2>
         <div className="flex space-x-2">
           <button
+            onClick={() => router.push('/workouts/zones')}
+            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all"
+          >
+            Training Zones
+          </button>
+          <button
             onClick={() => setShowPlanForm(true)}
             className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"
           >
