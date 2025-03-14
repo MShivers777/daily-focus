@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import supabase from '../api/supabase';
 
-export default function CalendarView({ workoutHistory = [] }) {  // Add default value
+export default function CalendarView({ workoutHistory = [], plannedWorkouts = [] }) {  // Add default value
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [plannedWorkouts, setPlannedWorkouts] = useState([]);
+  const [plannedWorkoutsState, setPlannedWorkoutsState] = useState([]);
 
   useEffect(() => {
     fetchPlannedWorkouts();
@@ -26,7 +26,7 @@ export default function CalendarView({ workoutHistory = [] }) {  // Add default 
         .lte('start_date', endOfMonth.toISOString())
         .or(`end_date.gt.${startOfMonth.toISOString()},end_date.is.null`);
 
-      setPlannedWorkouts(data || []);
+      setPlannedWorkoutsState(data || []);
     } catch (error) {
       console.error('Error fetching planned workouts:', error);
     }
@@ -53,43 +53,20 @@ export default function CalendarView({ workoutHistory = [] }) {  // Add default 
   };
 
   const getWorkoutsForDate = (date) => {
-    if (!date || !Array.isArray(workoutHistory)) return [];
+    if (!date) return [];
 
     const dateString = date.toISOString().split('T')[0];
     
-    // Only include completed workouts that have non-zero values
+    // Get completed workouts
     const completed = workoutHistory?.filter(w => 
       w?.workout_date === dateString && 
       (w?.strength_volume > 0 || w?.cardio_load > 0)
     ) || [];
     
-    // Only include planned workouts that have non-zero values
-    const planned = plannedWorkouts?.filter(workout => {
-      // Skip if all values are zero
-      if (!workout.strength_volume && !workout.cardio_load) {
-        return false;
-      }
-
-      const startDate = new Date(workout.start_date);
-      const endDate = workout.end_date ? new Date(workout.end_date) : null;
-      const currentDate = new Date(dateString);
-
-      // Check if date is within range
-      if (endDate && currentDate > endDate) return false;
-      if (currentDate < startDate) return false;
-
-      // Handle different recurrence types
-      switch (workout.recurrence) {
-        case 'daily':
-          return true;
-        case 'weekly':
-          return currentDate.getDay() === startDate.getDay();
-        case 'custom':
-          return workout.custom_days?.includes(currentDate.getDay());
-        default:
-          return currentDate.getTime() === startDate.getTime();
-      }
-    }) || [];
+    // Get planned workouts for this date
+    const planned = plannedWorkouts?.filter(w => 
+      w?.planned_date === dateString
+    ) || [];
 
     return [...completed, ...planned];
   };

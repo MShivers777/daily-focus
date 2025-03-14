@@ -52,7 +52,8 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
     customDays: WEEKDAYS.reduce((acc, day) => ({ ...acc, [day.id]: false }), {}),
     endType: 'never',
     endAfter: 1,
-    endDate: ''
+    endDate: '',
+    planned_date: new Date().toISOString().split('T')[0],  // Add this field
   });
 
   const handleChange = (field, value) => {
@@ -85,6 +86,19 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Date Selection - Add this first */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Workout Date
+        </label>
+        <input 
+          type="date" 
+          value={formData.planned_date}
+          onChange={(e) => handleChange('planned_date', e.target.value)}
+          className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+        />
+      </div>
+
       {/* Workout Type Selection */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">

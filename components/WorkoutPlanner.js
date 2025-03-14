@@ -66,15 +66,26 @@ export default function WorkoutPlanner() {
   const handlePlanWorkout = async (planData) => {
     try {
       setError(null);
-      await createPlannedWorkout({
-        ...planData,
-        user_id: session.user.id
-      });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { error } = await supabase
+        .from('planned_workouts')
+        .insert([{
+          ...planData,
+          user_id: session.user.id,
+          created_at: new Date().toISOString()
+        }]);
+
+      if (error) throw error;
+      
       await loadPlannedWorkouts();
       setShowPlanForm(false);
+      toast.success('Workout planned successfully');
     } catch (err) {
+      console.error('Error planning workout:', err);
       setError('Failed to plan workout');
-      console.error(err);
+      toast.error('Failed to plan workout');
     }
   };
 
@@ -136,7 +147,10 @@ export default function WorkoutPlanner() {
       ) : view === 'list' ? (
         <WorkoutList workouts={plannedWorkouts} />
       ) : (
-        <CalendarView workoutHistory={history} />
+        <CalendarView 
+          workoutHistory={history} 
+          plannedWorkouts={plannedWorkouts} 
+        />
       )}
       {error && <ErrorMessage message={error} />}
     </div>
