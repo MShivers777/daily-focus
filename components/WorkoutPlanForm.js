@@ -37,7 +37,7 @@ const STRENGTH_TYPES = [
   { id: 'custom', label: 'Custom' }
 ];
 
-export default function WorkoutPlanForm({ onSubmit, onCancel }) {
+export default function WorkoutPlanForm({ onSubmit, onCancel, initialDate }) {
   const [formData, setFormData] = useState({
     workoutType: '',
     strength_volume: '',
@@ -66,7 +66,7 @@ export default function WorkoutPlanForm({ onSubmit, onCancel }) {
     endType: 'never',
     endAfter: 1,
     endDate: '',
-    planned_date: new Date().toISOString().split('T')[0],  // Add this field
+    planned_date: initialDate || new Date().toISOString().split('T')[0],  // Add this field
   });
 
   const handleChange = (field, value) => {

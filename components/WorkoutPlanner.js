@@ -149,7 +149,8 @@ export default function WorkoutPlanner() {
       ) : (
         <CalendarView 
           workoutHistory={history} 
-          plannedWorkouts={plannedWorkouts} 
+          plannedWorkouts={plannedWorkouts}
+          onAddWorkout={handlePlanWorkout}
         />
       )}
       {error && <ErrorMessage message={error} />}
