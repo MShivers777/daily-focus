@@ -5,8 +5,10 @@ import WorkoutList from './WorkoutList';
 import WorkoutPlanForm from './WorkoutPlanForm';
 import ErrorMessage from './ErrorMessage';
 import CalendarView from './CalendarView';
+import { useRouter } from 'next/navigation';
 
 export default function WorkoutPlanner() {
+  const router = useRouter();
   const [view, setView] = useState('list');
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
