@@ -1,6 +1,9 @@
 'use client';
+
+import { useState, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import zoom from 'chartjs-plugin-zoom';
 import ErrorMessage from './ErrorMessage';
 import {
   Chart as ChartJS,
@@ -21,10 +24,14 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  annotationPlugin  // Register the annotation plugin
+  annotationPlugin,
+  zoom
 );
 
-export default function LoadRatiosGraph({ data, visibleLines }) {
+export default function LoadRatiosGraph({ data, visibleLines, className = '', expanded = false }) {
+  const chartRef = useRef(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-48 flex items-center justify-center">
@@ -47,11 +54,12 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
     });
 
     const chartData = {
-      labels: data.map(d => d.workout_date),
+      // For expanded view, reverse the labels and datasets
+      labels: expanded ? [...data].reverse().map(d => d.workout_date) : data.map(d => d.workout_date),
       datasets: [
         {
           label: 'Strength',
-          data: strengthData,
+          data: expanded ? [...strengthData].reverse() : strengthData,
           borderColor: 'rgb(59, 130, 246)', // blue-500
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
           hidden: !visibleLines.strength,
@@ -62,7 +70,7 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
         },
         {
           label: 'Cardio',
-          data: cardioData,
+          data: expanded ? [...cardioData].reverse() : cardioData,
           borderColor: 'rgb(234, 88, 12)', // orange-500
           backgroundColor: 'rgba(234, 88, 12, 0.1)',
           hidden: !visibleLines.cardio,
@@ -73,7 +81,7 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
         },
         {
           label: 'Combined',
-          data: combinedData,
+          data: expanded ? [...combinedData].reverse() : combinedData,
           borderColor: 'rgb(16, 185, 129)', // green-500
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
           hidden: !visibleLines.combined,
@@ -85,13 +93,22 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
       ]
     };
 
-    const options = {
+    const getChartOptions = (isExpanded) => ({
       responsive: true,
+      maintainAspectRatio: false,
       scales: {
         y: {
           beginAtZero: true,
           grid: {
             color: 'rgba(156, 163, 175, 0.1)' // gray-400 with opacity
+          },
+          title: {
+            display: isExpanded, // Only show in expanded view
+            text: 'Load Ratio (Acute:Chronic)',
+            color: 'rgb(107, 114, 128)', // text-gray-500
+            font: {
+              size: isExpanded ? 18 : 12  // 50% bigger in expanded view
+            }
           }
         },
         x: {
@@ -101,16 +118,50 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
           ticks: {
             maxRotation: 45,
             minRotation: 45
+          },
+          title: {
+            display: isExpanded, // Only show in expanded view
+            text: 'Date',
+            color: 'rgb(107, 114, 128)', // text-gray-500
+            font: {
+              size: isExpanded ? 18 : 12  // 50% bigger in expanded view
+            }
           }
         }
       },
       plugins: {
         legend: {
-          display: false
+          display: isExpanded, // Only show in expanded view
+          position: 'bottom', // Changed from 'top' to 'bottom'
+          align: 'center',
+          labels: {
+            usePointStyle: true,
+            boxWidth: 6,
+            boxHeight: 6,
+            padding: 20,
+            color: 'rgb(107, 114, 128)' // text-gray-500
+          }
+        },
+        title: {
+          display: isExpanded, // Only show in expanded view
+          text: 'Training Load Ratios',
+          color: 'rgb(31, 41, 55)', // text-gray-800
+          font: {
+            size: 16,
+            weight: 'bold'
+          },
+          padding: { bottom: 20 }
         },
         tooltip: {
           intersect: false,
-          mode: 'index'
+          mode: 'index',
+          callbacks: {
+            label: function(context) {
+              const label = context.dataset.label;
+              const value = context.parsed.y.toFixed(2);
+              return `${label}: ${value}`;
+            }
+          }
         },
         annotation: {
           annotations: {
@@ -118,21 +169,77 @@ export default function LoadRatiosGraph({ data, visibleLines }) {
               type: 'box',
               yMin: 0.8,
               yMax: 1.4,
-              backgroundColor: 'rgba(34, 197, 94, 0.1)', // green-500 with low opacity
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
               borderColor: 'transparent',
+              label: {
+                display: isExpanded, // Only show label in expanded view
+                content: 'Ideal Range',
+                position: 'start',
+                color: 'rgb(107, 114, 128)',
+                font: {
+                  size: 11
+                }
+              }
             }
           }
-        }
+        },
+        zoom: isExpanded ? {
+          zoom: {
+            wheel: {
+              enabled: true,
+              modifierKey: 'ctrl'
+            },
+            pinch: {
+              enabled: true
+            },
+            mode: 'x',
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(99,102,241,0.2)'
+            }
+          },
+          pan: {
+            enabled: true,
+            mode: 'x',
+            modifierKey: null
+          },
+          limits: {
+            y: {
+              min: 0,
+              max: 3
+            }
+          }
+        } : undefined
       },
       interaction: {
         intersect: false,
         mode: 'index'
       }
-    };
+    });
 
     return (
-      <div className="w-full h-48">
-        <Line data={chartData} options={options} />
+      <div 
+        className={`relative ${expanded ? 'h-[70vh]' : 'h-48'} ${className}`}
+      >
+        <Line 
+          ref={chartRef}
+          data={chartData} 
+          options={getChartOptions(expanded)} 
+        />
+        {expanded && (
+          <div className="absolute bottom-0 right-0 p-4 flex gap-2">
+            <button
+              onClick={() => {
+                if (chartRef.current) {
+                  chartRef.current.resetZoom();
+                }
+              }}
+              className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              Reset View
+            </button>
+          </div>
+        )}
       </div>
     );
   } catch (error) {

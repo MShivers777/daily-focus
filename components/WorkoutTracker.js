@@ -12,6 +12,7 @@ import HydrationGuide from './HydrationGuide';
 import WorkoutHistoryItem from './WorkoutHistoryItem';
 import { useRouter } from 'next/navigation';
 import { calculateLoads, previewWorkoutLoads, validateLoads } from '../utils/loadCalculations';
+import ExpandedGraphModal from './ExpandedGraphModal';
 
 export default function WorkoutTracker() {
   const router = useRouter();
@@ -44,6 +45,7 @@ export default function WorkoutTracker() {
   const [existingWorkout, setExistingWorkout] = useState(null);
   const [pendingWorkout, setPendingWorkout] = useState(null);
   const [previewLoads, setPreviewLoads] = useState(null);
+  const [isGraphExpanded, setIsGraphExpanded] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -350,10 +352,15 @@ export default function WorkoutTracker() {
               onClick={() => toggleLine('combined')}
             />
           </div>
-          <LoadRatiosGraph 
-            data={history.slice(0, 14).reverse()} 
-            visibleLines={visibleLines} 
-          />
+          <div 
+            onClick={() => setIsGraphExpanded(true)}
+            className="cursor-pointer transition-all hover:opacity-80"
+          >
+            <LoadRatiosGraph 
+              data={history.slice(0, 14).reverse()} 
+              visibleLines={visibleLines} 
+            />
+          </div>
         </div>
 
         {/* History Card */}
@@ -403,6 +410,16 @@ export default function WorkoutTracker() {
         isSaving={isSaving}
         error={saveError}
       />
+      <ExpandedGraphModal
+        isOpen={isGraphExpanded}
+        onClose={() => setIsGraphExpanded(false)}
+      >
+        <LoadRatiosGraph 
+          data={history}  // Show all history in expanded view
+          visibleLines={visibleLines}
+          expanded={true}
+        />
+      </ExpandedGraphModal>
     </div>
   );
 }
