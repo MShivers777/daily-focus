@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast'; // Add this import
 import supabase from '../api/supabase';
 import LoadRatiosGraph from './LoadRatiosGraph';
 import LoadRatioDisplay from './LoadRatioDisplay';
@@ -97,7 +98,10 @@ export default function WorkoutTracker() {
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        toast.error('Please sign in to save workouts');
+        return;
+      }
       
       const formattedData = {
         workout_date: workoutDate,
@@ -105,10 +109,8 @@ export default function WorkoutTracker() {
         cardio_load: parseInt(cardioLoad) || 0,
         note: note,
         user_id: session.user.id,
-        created_at: new Date().toISOString()
       };
 
-      // Check for existing workout
       const { data: existingData, error: checkError } = await supabase
         .from('workouts')
         .select('*')
@@ -116,6 +118,7 @@ export default function WorkoutTracker() {
         .eq('user_id', session.user.id);
 
       if (checkError) {
+        toast.error('Error checking for existing workout');
         console.error('Error checking existing workout:', checkError);
         return;
       }
@@ -128,10 +131,11 @@ export default function WorkoutTracker() {
       }
 
       await saveWorkout(formattedData);
+      toast.success('Workout saved successfully');
 
     } catch (error) {
       console.error('Error submitting workout:', error);
-      toast.error('Failed to save workout');
+      toast.error(error.message || 'Failed to save workout');
     }
   };
 
@@ -147,32 +151,28 @@ export default function WorkoutTracker() {
   const saveWorkout = async (data, mode = 'new') => {
     setIsSaving(true);
     setSaveError(null);
-    setShowHydrationGuide(true);
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        throw new Error('No session found');
+      }
 
-      let result;
       const baseData = {
         workout_date: data.workout_date,
         strength_volume: parseInt(data.strength_volume) || 0,
         cardio_load: parseInt(data.cardio_load) || 0,
         note: data.note || '',
-        user_id: session.user.id,
+        user_id: session.user.id
       };
 
-      // First get all workouts to calculate loads
-      const { data: allWorkouts } = await supabase
-        .from('workouts')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('workout_date', { ascending: false });
-
-      let workoutsToCalculate = [...allWorkouts];
+      let response;
 
       if (mode === 'add' || mode === 'replace') {
-        // Update existing workout
+        if (!existingWorkout?.id) {
+          throw new Error('No existing workout found for update');
+        }
+
         const updatedData = mode === 'add' 
           ? {
               ...baseData,
@@ -182,56 +182,39 @@ export default function WorkoutTracker() {
             }
           : baseData;
 
-        workoutsToCalculate = workoutsToCalculate.map(w => 
-          w.id === existingWorkout.id ? { ...w, ...updatedData } : w
-        );
-      } else {
-        // New workout
-        workoutsToCalculate = [baseData, ...workoutsToCalculate];
-      }
-
-      // Calculate loads for all workouts
-      const workoutsWithLoads = calculateLoads(workoutsToCalculate);
-      const workoutToSave = workoutsWithLoads.find(w => w.workout_date === data.workout_date);
-
-      // Save to database with calculated loads
-      if (mode === 'add' || mode === 'replace') {
-        result = await supabase
+        response = await supabase
           .from('workouts')
-          .update(workoutToSave)
+          .update(updatedData)
           .eq('id', existingWorkout.id)
           .select()
           .single();
       } else {
-        result = await supabase
+        response = await supabase
           .from('workouts')
-          .insert([workoutToSave])
+          .insert([baseData])
           .select()
           .single();
       }
 
-      if (result.error) throw result.error;
-
-      // After successful save, validate the loads
-      const savedWorkout = result.data;
-      const isValid = validateLoads(previewLoads, savedWorkout);
-      
-      if (!isValid) {
-        console.warn('Load calculation mismatch between client and server');
-        // Use server values but keep functionality working
+      if (response.error) {
+        throw new Error(response.error.message);
       }
 
       await fetchHistory();
-      setPreviewLoads(null);
+      setShowHydrationGuide(true);
+      
       // Reset form
       setWorkoutDate(new Date().toISOString().split('T')[0]);
       setStrengthVolume('');
       setCardioLoad('');
       setNote('');
+      toast.success('Workout saved successfully');
 
     } catch (error) {
       console.error('Failed to save workout:', error);
-      setSaveError(error);
+      setSaveError(error.message);
+      toast.error(error.message || 'Failed to save workout');
+      throw error;
     } finally {
       setIsSaving(false);
       setShowWorkoutConfirm(false);
