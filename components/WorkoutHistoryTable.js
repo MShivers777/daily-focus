@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import supabase from '../api/supabase';
+import { calculateLoads } from '../utils/loadCalculations';
 
 const COLUMNS = [
   { key: 'workout_date', label: 'Date' },
@@ -38,7 +39,10 @@ export default function WorkoutHistoryTable() {
         .order('workout_date', { ascending: false });
 
       if (error) throw error;
-      setHistory(data || []);
+      
+      // Calculate loads for all workouts
+      const workoutsWithLoads = calculateLoads(data || []);
+      setHistory(workoutsWithLoads);
     } catch (error) {
       console.error('Error loading workout history:', error);
     } finally {

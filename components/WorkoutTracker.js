@@ -10,6 +10,7 @@ import WorkoutConfirmation from './WorkoutConfirmation';
 import HydrationGuide from './HydrationGuide';
 import WorkoutHistoryItem from './WorkoutHistoryItem';
 import { useRouter } from 'next/navigation';
+import { calculateLoads, previewWorkoutLoads, validateLoads } from '../utils/loadCalculations';
 
 export default function WorkoutTracker() {
   const router = useRouter();
@@ -41,10 +42,27 @@ export default function WorkoutTracker() {
   const [showWorkoutConfirm, setShowWorkoutConfirm] = useState(false);
   const [existingWorkout, setExistingWorkout] = useState(null);
   const [pendingWorkout, setPendingWorkout] = useState(null);
+  const [previewLoads, setPreviewLoads] = useState(null);
 
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  // Add this effect to update preview loads when form changes
+  useEffect(() => {
+    if (strengthVolume || cardioLoad) {
+      const previewWorkout = {
+        workout_date: workoutDate,
+        strength_volume: parseInt(strengthVolume) || 0,
+        cardio_load: parseInt(cardioLoad) || 0,
+        note: note
+      };
+      const preview = previewWorkoutLoads(history, previewWorkout);
+      setPreviewLoads(preview);
+    } else {
+      setPreviewLoads(null);
+    }
+  }, [workoutDate, strengthVolume, cardioLoad, history]);
 
   // Copy all the workout-related functions from the dashboard
   const fetchHistory = async () => {
@@ -131,8 +149,6 @@ export default function WorkoutTracker() {
     setSaveError(null);
     setShowHydrationGuide(true);
     
-    const startTime = Date.now();
-    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -146,45 +162,67 @@ export default function WorkoutTracker() {
         user_id: session.user.id,
       };
 
-      if (mode === 'add') {
-        const combinedData = {
-          ...baseData,
-          strength_volume: (existingWorkout.strength_volume || 0) + (baseData.strength_volume || 0),
-          cardio_load: (existingWorkout.cardio_load || 0) + (baseData.cardio_load || 0),
-          note: baseData.note ? `${existingWorkout.note || ''}\n${baseData.note}` : existingWorkout.note,
-          updated_at: new Date().toISOString()
-        };
-        
+      // First get all workouts to calculate loads
+      const { data: allWorkouts } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('workout_date', { ascending: false });
+
+      let workoutsToCalculate = [...allWorkouts];
+
+      if (mode === 'add' || mode === 'replace') {
+        // Update existing workout
+        const updatedData = mode === 'add' 
+          ? {
+              ...baseData,
+              strength_volume: (existingWorkout.strength_volume || 0) + (baseData.strength_volume || 0),
+              cardio_load: (existingWorkout.cardio_load || 0) + (baseData.cardio_load || 0),
+              note: baseData.note ? `${existingWorkout.note || ''}\n${baseData.note}` : existingWorkout.note
+            }
+          : baseData;
+
+        workoutsToCalculate = workoutsToCalculate.map(w => 
+          w.id === existingWorkout.id ? { ...w, ...updatedData } : w
+        );
+      } else {
+        // New workout
+        workoutsToCalculate = [baseData, ...workoutsToCalculate];
+      }
+
+      // Calculate loads for all workouts
+      const workoutsWithLoads = calculateLoads(workoutsToCalculate);
+      const workoutToSave = workoutsWithLoads.find(w => w.workout_date === data.workout_date);
+
+      // Save to database with calculated loads
+      if (mode === 'add' || mode === 'replace') {
         result = await supabase
           .from('workouts')
-          .update(combinedData)
+          .update(workoutToSave)
           .eq('id', existingWorkout.id)
-          .select('*')
-          .single();
-      } else if (mode === 'replace') {
-        result = await supabase
-          .from('workouts')
-          .update(baseData)
-          .eq('id', existingWorkout.id)
-          .select('*')
+          .select()
           .single();
       } else {
         result = await supabase
           .from('workouts')
-          .insert([baseData])
-          .select('*')
+          .insert([workoutToSave])
+          .select()
           .single();
       }
 
       if (result.error) throw result.error;
 
-      // Wait for minimum loading time
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(2000 - elapsedTime, 0);
-      await new Promise(resolve => setTimeout(resolve, remainingTime));
+      // After successful save, validate the loads
+      const savedWorkout = result.data;
+      const isValid = validateLoads(previewLoads, savedWorkout);
+      
+      if (!isValid) {
+        console.warn('Load calculation mismatch between client and server');
+        // Use server values but keep functionality working
+      }
 
       await fetchHistory();
-      
+      setPreviewLoads(null);
       // Reset form
       setWorkoutDate(new Date().toISOString().split('T')[0]);
       setStrengthVolume('');
@@ -276,6 +314,29 @@ export default function WorkoutTracker() {
             </button>
           </form>
         </div>
+
+        {/* Add preview section */}
+        {previewLoads && (
+          <div className="lg:col-span-2">
+            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                Preview Loads
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p>Strength Acute: {previewLoads.strength_acute_load?.toFixed(2)}</p>
+                  <p>Strength Chronic: {previewLoads.strength_chronic_load?.toFixed(2)}</p>
+                  <p>Strength Ratio: {previewLoads.strength_ratio?.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p>Cardio Acute: {previewLoads.cardio_acute_load?.toFixed(2)}</p>
+                  <p>Cardio Chronic: {previewLoads.cardio_chronic_load?.toFixed(2)}</p>
+                  <p>Cardio Ratio: {previewLoads.cardio_ratio?.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right Column */}
