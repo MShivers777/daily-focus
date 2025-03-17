@@ -4,7 +4,7 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key"
+    "NEXT_PUBLIC_SUPABASE_URL": "https://ejffrphknvtsmntlqwtp.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqZmZycGhrbnZ0c21udGxxd3RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzMTU2OTQsImV4cCI6MjA1NTg5MTY5NH0.HwMetNI_Y-osSsZJHe8pXGF1VIy7Jrf54MXcL4Q9XWQ"
   }
 }
