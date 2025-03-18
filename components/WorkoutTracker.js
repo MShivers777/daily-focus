@@ -111,6 +111,7 @@ export default function WorkoutTracker() {
         cardio_load: parseInt(cardioLoad) || 0,
         note: note,
         user_id: session.user.id,
+        planned: false  // Ensure completed workouts are not marked as planned
       };
 
       const { data: existingData, error: checkError } = await supabase

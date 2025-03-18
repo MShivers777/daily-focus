@@ -43,19 +43,17 @@ export default function WorkoutOnboarding() {
 
       // Save to planned_workouts table
       const { error } = await supabase
-        .from('planned_workouts')
+        .from('workouts')  // Changed from planned_workouts to workouts
         .insert({
           user_id: session.user.id,
+          workout_date: today,
           workout_type: 'onboarding',
           workouttype: formData.progressPace,
-          planned_date: today,
-          start_date: today,
+          planned: true,  // Add this field
           notes: JSON.stringify(formData),
           strength_volume: 0,
           cardio_load: 0,
-          created_at: new Date().toISOString(),
-          recurrence: 'once',
-          end_type: 'never'
+          created_at: new Date().toISOString()
         });
 
       if (error) throw error;
