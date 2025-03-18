@@ -2,16 +2,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import supabase from '../../../api/supabase';
 import BackIcon from '../../../components/icons/BackIcon';
 import GoalsForm from '../../../components/workout-onboarding/GoalsForm';
 import ExperienceForm from '../../../components/workout-onboarding/ExperienceForm';
+import ScheduleForm from '../../../components/workout-onboarding/ScheduleForm';
+import toast from 'react-hot-toast';
 
 export default function WorkoutOnboarding() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     goals: [],
-    progressPace: 'slow_steady',
+    progressPace: 'maintain', // Changed from slow_steady to maintain
     deloadFrequency: 4,
     workoutsPerWeek: 3,
     workoutDuration: 60,
@@ -25,27 +28,43 @@ export default function WorkoutOnboarding() {
     setCurrentStep(prev => prev + 1);
   };
 
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session found');
 
+      const today = new Date().toISOString().split('T')[0];
+
       // Save to planned_workouts table
       const { error } = await supabase
         .from('planned_workouts')
-        .insert([{
+        .insert({
           user_id: session.user.id,
           workout_type: 'onboarding',
           workouttype: formData.progressPace,
-          planned_date: new Date().toISOString().split('T')[0],
+          planned_date: today,
+          start_date: today,
           notes: JSON.stringify(formData),
-          created_at: new Date().toISOString()
-        }]);
+          strength_volume: 0,
+          cardio_load: 0,
+          created_at: new Date().toISOString(),
+          recurrence: 'once',
+          end_type: 'never'
+        });
 
       if (error) throw error;
+
+      toast.success('Workout preferences saved!');
       router.push('/workouts');
     } catch (error) {
-      console.error('Error saving workout preferences:', error);
+      console.error('Error details:', error);
+      toast.error(error.message || 'Failed to save workout preferences');
     }
   };
 
@@ -88,7 +107,14 @@ export default function WorkoutOnboarding() {
           {currentStep === 1 && (
             <GoalsForm 
               goals={formData.goals}
-              onChange={(goals) => setFormData(prev => ({ ...prev, goals }))}
+              pace={formData.progressPace}
+              onChange={(data) => {
+                if (Array.isArray(data)) {
+                  setFormData(prev => ({ ...prev, goals: data }));
+                } else {
+                  setFormData(prev => ({ ...prev, progressPace: data.pace }));
+                }
+              }}
               onNext={() => setCurrentStep(2)}
             />
           )}
@@ -97,9 +123,38 @@ export default function WorkoutOnboarding() {
               experience={formData.trainingExperience}
               onChange={(experience) => setFormData(prev => ({ ...prev, trainingExperience: experience }))}
               onNext={() => setCurrentStep(3)}
+              onBack={handleBack}
             />
           )}
-          {/* Add other step components here */}
+          {currentStep === 3 && (
+            <ScheduleForm
+              schedule={formData.schedule}
+              workoutDuration={formData.workoutDuration}
+              onChange={(data) => setFormData(prev => ({ ...prev, ...data }))}
+              onNext={() => setCurrentStep(4)}
+              onBack={handleBack}
+            />
+          )}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium">Review Your Plan</h3>
+              {/* Add review content */}
+              <div className="flex gap-4">
+                <button
+                  onClick={handleBack}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Complete Setup
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
