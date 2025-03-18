@@ -17,7 +17,7 @@ function calculateAverageLoad(workouts, currentDate, days, loadType) {
 }
 
 export function calculateLoads(workouts) {
-  return workouts.map(currentWorkout => {
+  const processedWorkouts = workouts.map(currentWorkout => {
     const workoutDate = currentWorkout.workout_date;
     
     // Calculate Strength Loads
@@ -44,6 +44,30 @@ export function calculateLoads(workouts) {
       combined_ratio: combinedRatio
     };
   });
+
+  const targetRatio = (date, isDeload) => {
+    if (isDeload) return 0.8; // Lower ratio for deload weeks
+    return Math.min(1.4, Math.max(1.0, currentRatio + 0.05)); // Progressive overload within bounds
+  };
+
+  // Calculate loads with automatic ratio management
+  workouts.forEach((workout, index) => {
+    const isDeloadWeek = index % (deloadFrequency * 7) < 7;
+    const target = targetRatio(workout.workout_date, isDeloadWeek);
+    
+    // Adjust volumes to maintain target ratio
+    if (index > 0 && !isDeloadWeek) {
+      const prevWorkout = processedWorkouts[index - 1];
+      const ratioAdjustment = target / (prevWorkout.combined_ratio || 1.0);
+      
+      workout.strength_volume = Math.round(workout.strength_volume * ratioAdjustment);
+      workout.cardio_load = Math.round(workout.cardio_load * ratioAdjustment);
+    }
+
+    // Rest of existing load calculations...
+  });
+
+  return processedWorkouts;
 }
 
 export function previewWorkoutLoads(existingWorkouts, newWorkout) {

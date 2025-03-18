@@ -14,7 +14,6 @@ export default function WorkoutOnboarding() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     goals: [],
-    progressPace: 'maintain', // Changed from slow_steady to maintain
     deloadFrequency: 4,
     workoutsPerWeek: 3,
     workoutDuration: 60,
@@ -105,21 +104,19 @@ export default function WorkoutOnboarding() {
           {currentStep === 1 && (
             <GoalsForm 
               goals={formData.goals}
-              pace={formData.progressPace}
-              onChange={(data) => {
-                if (Array.isArray(data)) {
-                  setFormData(prev => ({ ...prev, goals: data }));
-                } else {
-                  setFormData(prev => ({ ...prev, progressPace: data.pace }));
-                }
-              }}
+              onChange={(goals) => setFormData(prev => ({ ...prev, goals }))}
               onNext={() => setCurrentStep(2)}
             />
           )}
           {currentStep === 2 && (
             <ExperienceForm
               experience={formData.trainingExperience}
-              onChange={(experience) => setFormData(prev => ({ ...prev, trainingExperience: experience }))}
+              onChange={(data) => setFormData(prev => ({ 
+                ...prev, 
+                trainingExperience: data.trainingExperience,
+                heartRates: data.heartRates,
+                baselines: data.baselines
+              }))}
               onNext={() => setCurrentStep(3)}
               onBack={handleBack}
             />
