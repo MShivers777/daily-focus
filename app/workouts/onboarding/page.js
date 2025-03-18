@@ -8,6 +8,7 @@ import GoalsForm from '../../../components/workout-onboarding/GoalsForm';
 import ExperienceForm from '../../../components/workout-onboarding/ExperienceForm';
 import ScheduleForm from '../../../components/workout-onboarding/ScheduleForm';
 import toast from 'react-hot-toast';
+import { default as ReviewFormComponent } from '../../../components/workout-onboarding/ReviewForm';  // Fix import
 
 export default function WorkoutOnboarding() {
   const router = useRouter();
@@ -131,24 +132,11 @@ export default function WorkoutOnboarding() {
             />
           )}
           {currentStep === 4 && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium">Review Your Plan</h3>
-              {/* Add review content */}
-              <div className="flex gap-4">
-                <button
-                  onClick={handleBack}
-                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                >
-                  Complete Setup
-                </button>
-              </div>
-            </div>
+            <ReviewFormComponent
+              formData={formData}
+              onBack={handleBack}
+              onSubmit={handleSubmit}
+            />
           )}
         </div>
       </div>
