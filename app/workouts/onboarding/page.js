@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import supabase from '../../../api/supabase';
 import BackIcon from '../../../components/icons/BackIcon';
@@ -23,6 +23,43 @@ export default function WorkoutOnboarding() {
     trainingExperience: 0
   });
 
+  useEffect(() => {
+    const fetchExistingSettings = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data, error } = await supabase
+          .from('user_workout_settings')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setFormData({
+            goals: data.goals || [],
+            deloadFrequency: data.deload_frequency || 4,
+            workoutsPerWeek: data.workouts_per_week || 3,
+            workoutDuration: data.workout_duration || 60,
+            schedule: Array(7).fill(null).map((_, i) => 
+              data.schedule?.includes(i) ? i : null
+            ),
+            baselines: data.baselines || [],
+            trainingExperience: data.training_experience || 0,
+            heartRates: data.heart_rates || {}
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching existing settings:', error);
+        toast.error('Failed to load previous settings');
+      }
+    };
+
+    fetchExistingSettings();
+  }, []);
+
   const handleStepComplete = (stepData) => {
     setFormData(prev => ({ ...prev, ...stepData }));
     setCurrentStep(prev => prev + 1);
@@ -39,22 +76,24 @@ export default function WorkoutOnboarding() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session found');
 
-      const today = new Date().toISOString().split('T')[0];
+      // Ensure all required fields have values
+      const workoutSettings = {
+        user_id: session.user.id,
+        goals: formData.goals,
+        training_experience: formData.trainingExperience || 0, // Ensure we have a number
+        workout_duration: formData.workoutDuration,
+        workouts_per_week: formData.schedule.filter(day => day !== null).length,
+        deload_frequency: formData.deloadFrequency,
+        schedule: formData.schedule.map((day, index) => day !== null ? index : null).filter(day => day !== null),
+        heart_rates: formData.heartRates || {},
+        baselines: formData.baselines || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      // Save to planned_workouts table
       const { error } = await supabase
-        .from('workouts')  // Changed from planned_workouts to workouts
-        .insert({
-          user_id: session.user.id,
-          workout_date: today,
-          workout_type: 'onboarding',
-          workouttype: formData.progressPace,
-          planned: true,  // Add this field
-          notes: JSON.stringify(formData),
-          strength_volume: 0,
-          cardio_load: 0,
-          created_at: new Date().toISOString()
-        });
+        .from('user_workout_settings')
+        .upsert(workoutSettings);
 
       if (error) throw error;
 
@@ -73,8 +112,7 @@ export default function WorkoutOnboarding() {
       <button
         onClick={() => router.push('/workouts')}
         className="absolute top-0 left-0 p-2 rounded-lg transition-all bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-        aria-label="Back to workouts"
-      >
+        aria-label="Back to workouts">
         <BackIcon />
       </button>
       

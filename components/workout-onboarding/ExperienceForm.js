@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const PERFORMANCE_TYPES = [
   { id: 'strength', label: 'Strength' },
@@ -39,6 +39,12 @@ export default function ExperienceForm({ experience, onChange, onNext, onBack })
   const [baselines, setBaselines] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [timeInputs, setTimeInputs] = useState({ hours: '', minutes: '', seconds: '' });
+
+  useEffect(() => {
+    if (experience !== undefined) {
+      onChange({ trainingExperience: experience });
+    }
+  }, []);
 
   const handleNumberInput = (e, setter) => {
     const value = e.target.value;
@@ -116,7 +122,7 @@ export default function ExperienceForm({ experience, onChange, onNext, onBack })
   const handleSubmit = (e) => {
     e.preventDefault();
     onChange({
-      trainingExperience: experience,
+      trainingExperience: parseInt(experience) || 0, // Ensure we have a number
       heartRates: {
         resting: parseInt(restingHR) || null,
         max: parseInt(maxHR) || null

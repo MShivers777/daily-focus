@@ -1,4 +1,8 @@
 'use client';
+import { useState } from 'react';
+import { DndContext, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -7,37 +11,124 @@ function generateWorkoutPlan(formData) {
     .map((day, index) => day !== null ? index : null)
     .filter(day => day !== null);
 
-  const workoutTypes = ['Strength', 'Cardio'];
-  let currentType = 0;
-
-  // Generate 2 weeks of workouts
-  const weeks = Array(2).fill().map((_, weekIndex) => {
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() + (weekIndex * 7));
-    
-    return selectedDays.map(dayIndex => {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + ((dayIndex - weekStart.getDay() + 7) % 7));
-      
-      const workout = {
-        date,
-        day: DAYS[dayIndex],
-        type: workoutTypes[currentType],
+  // Create two weeks with fixed days but alternating workouts
+  return Array(2).fill().map((_, weekIndex) => {
+    const weekDays = DAYS.map((day, dayIndex) => ({
+      dayIndex,
+      dayName: day,
+      isSelected: selectedDays.includes(dayIndex),
+      workout: selectedDays.includes(dayIndex) ? {
+        type: selectedDays.indexOf(dayIndex) % 2 === 0 ? 'Strength' : 'Cardio',
         duration: formData.workoutDuration
-      };
-      
-      currentType = (currentType + 1) % workoutTypes.length;
-      return workout;
-    });
+      } : null
+    }));
+    return weekDays;
   });
-
-  return weeks;
 }
 
-// Make sure to use a default export
-const ReviewForm = ({ formData, onBack, onSubmit }) => {
+const SortableWorkout = ({ workout, dayName, id }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition
+  };
+
+  return (
+    <div className="flex items-center justify-between p-2 rounded">
+      <div className="w-20 text-sm font-medium">{dayName}</div>
+      {workout && (
+        <div
+          ref={setNodeRef}
+          style={style}
+          {...attributes}
+          {...listeners}
+          className={`flex-1 p-2 rounded cursor-move flex items-center justify-between ${
+            workout.type === 'Strength' 
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+              : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+          }`}
+        >
+          <span className="text-sm font-medium">{workout.type}</span>
+          <span className="text-sm">{workout.duration} min</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const WorkoutWeek = ({ week, weekIndex, onReorder }) => {
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!active || !over || active.id === over.id) return;
+
+    // Extract day indices from the IDs
+    const oldDayIndex = parseInt(active.id.split('-')[2]);
+    const newDayIndex = parseInt(over.id.split('-')[2]);
+    
+    onReorder(weekIndex, oldDayIndex, newDayIndex);
+  };
+
+  const sortableItems = week
+    .filter(day => day.workout)
+    .map(day => `week-${weekIndex}-${day.dayIndex}`);
+
+  return (
+    <div>
+      <h5 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+        Week {weekIndex + 1}
+      </h5>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={sortableItems}>
+          <div className="space-y-2">
+            {week.map((day) => (
+              <SortableWorkout
+                key={`week-${weekIndex}-${day.dayIndex}`}
+                id={`week-${weekIndex}-${day.dayIndex}`}
+                dayName={day.dayName}
+                workout={day.workout}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+};
+
+export default function ReviewForm({ formData, onBack, onSubmit }) {
+  const [workoutPlan, setWorkoutPlan] = useState(() => 
+    generateWorkoutPlan(formData)
+  );
+
+  const handleReorder = (weekIndex, oldDayIndex, newDayIndex) => {
+    setWorkoutPlan(prev => {
+      const newPlan = [...prev];
+      const week = [...newPlan[weekIndex]];
+      
+      // Swap workout types between days
+      const oldWorkout = week[oldDayIndex].workout;
+      const newWorkout = week[newDayIndex].workout;
+      
+      if (oldWorkout && newWorkout) {
+        week[oldDayIndex] = { ...week[oldDayIndex], workout: newWorkout };
+        week[newDayIndex] = { ...week[newDayIndex], workout: oldWorkout };
+      }
+      
+      newPlan[weekIndex] = week;
+      return newPlan;
+    });
+  };
+
   const selectedDays = formData.schedule.filter(day => day !== null).length;
-  const workoutPlan = generateWorkoutPlan(formData);
 
   return (
     <div className="space-y-8">
@@ -110,38 +201,18 @@ const ReviewForm = ({ formData, onBack, onSubmit }) => {
 
       {/* Workout Plan Section */}
       <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-        <h4 className="font-medium mb-4">2-Week Sample Schedule</h4>
+        <h4 className="font-medium mb-4">
+          2-Week Sample Schedule
+          <span className="text-sm text-gray-500 ml-2">(drag to reorder)</span>
+        </h4>
         <div className="space-y-6">
           {workoutPlan.map((week, weekIndex) => (
-            <div key={weekIndex}>
-              <h5 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Week {weekIndex + 1}
-              </h5>
-              <div className="space-y-2">
-                {week.map((workout, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium">
-                        {workout.day}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        workout.type === 'Strength' 
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
-                      }`}>
-                        {workout.type}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {workout.duration} min
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <WorkoutWeek
+              key={weekIndex}
+              week={week}
+              weekIndex={weekIndex}
+              onReorder={handleReorder}
+            />
           ))}
         </div>
       </div>
@@ -176,5 +247,3 @@ function getExperienceText(level) {
     default: return 'Not specified';
   }
 }
-
-export default ReviewForm;  // Add this line to properly export the component
