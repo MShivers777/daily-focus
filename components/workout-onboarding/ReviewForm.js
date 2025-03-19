@@ -6,19 +6,99 @@ import { CSS } from '@dnd-kit/utilities';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+// Add base workout plan
+const BASE_WORKOUT_SCHEDULE = {
+  beginner: {
+    1: {
+      pattern: ['Strength']  // Full body strength for single day
+    },
+    2: {
+      pattern: ['Strength', 'Cardio']
+    },
+    3: {
+      pattern: ['Strength', 'Cardio', 'Strength']
+    },
+    4: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio']
+    },
+    5: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
+    },
+    7: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
+    }
+  },
+  intermediate: {
+    1: {
+      pattern: ['Strength']
+    },
+    2: {
+      pattern: ['Strength', 'Cardio']
+    },
+    3: {
+      pattern: ['Strength', 'Cardio', 'Strength']
+    },
+    4: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio']
+    },
+    5: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
+    },
+    6: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio']
+    },
+    7: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
+    }
+  },
+  advanced: {
+    1: {
+      pattern: ['Strength']
+    },
+    2: {
+      pattern: ['Strength', 'Cardio']
+    },
+    4: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio']
+    },
+    5: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
+    },
+    6: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio']
+    },
+    7: {
+      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
+    }
+  }
+};
+
 function generateWorkoutPlan(formData) {
   const selectedDays = formData.schedule
     .map((day, index) => day !== null ? index : null)
     .filter(day => day !== null);
 
-  // Create two weeks with fixed days but alternating workouts
+  // Determine experience level
+  let experienceLevel = 'beginner';
+  if (formData.trainingExperience >= 3) {
+    experienceLevel = 'advanced';
+  } else if (formData.trainingExperience >= 1) {
+    experienceLevel = 'intermediate';
+  }
+
+  // Get workout pattern based on experience and days per week
+  const daysPerWeek = selectedDays.length;
+  const pattern = BASE_WORKOUT_SCHEDULE[experienceLevel][daysPerWeek]?.pattern || 
+    BASE_WORKOUT_SCHEDULE.beginner[3].pattern;
+
+  // Create two weeks with fixed days and recommended workout types
   return Array(2).fill().map((_, weekIndex) => {
     const weekDays = DAYS.map((day, dayIndex) => ({
       dayIndex,
       dayName: day,
       isSelected: selectedDays.includes(dayIndex),
       workout: selectedDays.includes(dayIndex) ? {
-        type: selectedDays.indexOf(dayIndex) % 2 === 0 ? 'Strength' : 'Cardio',
+        type: pattern[selectedDays.indexOf(dayIndex) % pattern.length],
         duration: formData.workoutDuration
       } : null
     }));
