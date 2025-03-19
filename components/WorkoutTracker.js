@@ -14,6 +14,8 @@ import { useRouter } from 'next/navigation';
 import { calculateLoads, previewWorkoutLoads, validateLoads } from '../utils/loadCalculations';
 import ExpandedGraphModal from './ExpandedGraphModal';
 
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 export default function WorkoutTracker() {
   const router = useRouter();
   const [workoutDate, setWorkoutDate] = useState(() => {
@@ -46,9 +48,33 @@ export default function WorkoutTracker() {
   const [pendingWorkout, setPendingWorkout] = useState(null);
   const [previewLoads, setPreviewLoads] = useState(null);
   const [isGraphExpanded, setIsGraphExpanded] = useState(false);
+  const [workoutSettings, setWorkoutSettings] = useState(null);
 
   useEffect(() => {
     fetchHistory();
+    
+    // Add settings fetch
+    const fetchWorkoutSettings = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data, error } = await supabase
+          .from('user_workout_settings')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) throw error;
+        setWorkoutSettings(data);
+      } catch (error) {
+        console.error('Error fetching workout settings:', error);
+      }
+    };
+
+    fetchWorkoutSettings();
   }, []);
 
   // Add this effect to update preview loads when form changes
@@ -363,6 +389,36 @@ export default function WorkoutTracker() {
             />
           </div>
         </div>
+
+        {/* Schedule Card - Add this before History Card */}
+        {workoutSettings && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+              Weekly Schedule
+            </h2>
+            <div className="grid grid-cols-7 gap-2 text-center mb-4">
+              {DAYS.map((day, index) => {
+                const isWorkoutDay = workoutSettings.schedule?.includes(index);
+                return (
+                  <div
+                    key={day}
+                    className={`p-2 rounded-lg text-sm ${
+                      isWorkoutDay
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
+                        : 'bg-gray-50 dark:bg-gray-700/50 text-gray-400'
+                    }`}
+                  >
+                    {day.slice(0, 3)}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              <p>{workoutSettings.workouts_per_week} workouts per week</p>
+              <p>{workoutSettings.workout_duration} minutes per session</p>
+            </div>
+          </div>
+        )}
 
         {/* History Card */}
         <div 
