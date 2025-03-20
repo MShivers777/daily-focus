@@ -50,6 +50,15 @@ export default function WorkoutTracker() {
   const [previewLoads, setPreviewLoads] = useState(null);
   const [isGraphExpanded, setIsGraphExpanded] = useState(false);
   const [workoutSettings, setWorkoutSettings] = useState(null);
+  const [activeTab, setActiveTab] = useState('track');
+  const [planStartDate, setPlanStartDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [tempSchedule, setTempSchedule] = useState([]);
+  const [tempWorkoutTypes, setTempWorkoutTypes] = useState({});
+  const [showAllWorkouts, setShowAllWorkouts] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -80,10 +89,9 @@ export default function WorkoutTracker() {
         cardio_load: parseInt(cardioLoad) || 0,
         note: note
       };
-      
       // Get actual deload frequency from settings or use default
       const preview = previewWorkoutLoads(
-        history, 
+        history,
         previewWorkout
       );
       setPreviewLoads(preview);
@@ -97,15 +105,12 @@ export default function WorkoutTracker() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-
       const { data, error } = await supabase
         .from('workouts')
         .select('*')
         .eq('user_id', session.user.id)
         .order('workout_date', { ascending: false });
-
       if (error) throw error;
-
       setHistory(data);
       const latestEntry = data[0];
       if (latestEntry) {
@@ -122,26 +127,21 @@ export default function WorkoutTracker() {
 
   const getWorkoutTypeForDate = (date) => {
     if (!workoutSettings?.schedule) return 'mixed';
-
     const dayIndex = new Date(date).getDay();
     const scheduleIndex = workoutSettings.schedule.indexOf(dayIndex);
-    
     if (scheduleIndex === -1) return 'unscheduled';
-
     const pattern = getWorkoutPattern(workoutSettings);
     return pattern?.[scheduleIndex % pattern.length] || 'mixed';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Please sign in to save workouts');
         return;
       }
-      
       const formattedData = {
         workout_date: workoutDate,
         strength_volume: parseInt(strengthVolume) || 0,
@@ -151,29 +151,24 @@ export default function WorkoutTracker() {
         workout_type: getWorkoutTypeForDate(workoutDate),
         planned: false  // Ensure completed workouts are not marked as planned
       };
-
       const { data: existingData, error: checkError } = await supabase
         .from('workouts')
         .select('*')
         .eq('workout_date', workoutDate)
         .eq('user_id', session.user.id);
-
       if (checkError) {
         toast.error('Error checking for existing workout');
         console.error('Error checking existing workout:', checkError);
         return;
       }
-
       if (existingData && existingData.length > 0) {
         setExistingWorkout(existingData[0]);
         setPendingWorkout(formattedData);
         setShowWorkoutConfirm(true);
         return;
       }
-
       await saveWorkout(formattedData);
       toast.success('Workout saved successfully');
-
     } catch (error) {
       console.error('Error submitting workout:', error);
       toast.error(error.message || 'Failed to save workout');
@@ -192,13 +187,11 @@ export default function WorkoutTracker() {
   const saveWorkout = async (data, mode = 'new') => {
     setIsSaving(true);
     setSaveError(null);
-    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No session found');
       }
-
       const baseData = {
         workout_date: data.workout_date,
         strength_volume: parseInt(data.strength_volume) || 0,
@@ -207,23 +200,19 @@ export default function WorkoutTracker() {
         user_id: session.user.id,
         workout_type: data.workout_type || getWorkoutTypeForDate(data.workout_date)
       };
-
       let response;
-
       if (mode === 'add' || mode === 'replace') {
         if (!existingWorkout?.id) {
           throw new Error('No existing workout found for update');
         }
-
         const updatedData = mode === 'add' 
-          ? {
+          ? { 
               ...baseData,
               strength_volume: (existingWorkout.strength_volume || 0) + (baseData.strength_volume || 0),
               cardio_load: (existingWorkout.cardio_load || 0) + (baseData.cardio_load || 0),
               note: baseData.note ? `${existingWorkout.note || ''}\n${baseData.note}` : existingWorkout.note
-            }
+            } 
           : baseData;
-
         response = await supabase
           .from('workouts')
           .update(updatedData)
@@ -237,21 +226,17 @@ export default function WorkoutTracker() {
           .select()
           .single();
       }
-
       if (response.error) {
         throw new Error(response.error.message);
       }
-
       await fetchHistory();
       setShowHydrationGuide(true);
-      
       // Reset form
       setWorkoutDate(new Date().toISOString().split('T')[0]);
       setStrengthVolume('');
       setCardioLoad('');
       setNote('');
       toast.success('Workout saved successfully');
-
     } catch (error) {
       console.error('Failed to save workout:', error);
       setSaveError(error.message);
@@ -295,85 +280,438 @@ export default function WorkoutTracker() {
   // Add BASE_WORKOUT_SCHEDULE constant at the top of the file
   const getWorkoutPattern = (workoutSettings) => {
     if (!workoutSettings) return null;
-
     const experienceLevel = workoutSettings.training_experience >= 3 
       ? 'advanced' 
       : workoutSettings.training_experience >= 1 
         ? 'intermediate' 
         : 'beginner';
-    
     const daysPerWeek = workoutSettings.schedule.length;
     return BASE_WORKOUT_SCHEDULE[experienceLevel][daysPerWeek]?.pattern;
+  };
+
+  const handleScheduleUpdate = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Create schedule array with indices of days that have workouts
+      const schedule = Object.entries(tempWorkoutTypes)
+        .filter(([_, type]) => type !== null)
+        .map(([index]) => parseInt(index));
+
+      // Format workout_types as a proper JSON object
+      const workout_types = {};
+      Object.entries(tempWorkoutTypes).forEach(([key, value]) => {
+        if (value !== null) {
+          workout_types[key] = value;
+        }
+      });
+
+      const updatedSettings = {
+        ...workoutSettings,
+        schedule,
+        workout_types, // Send as a regular object
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('user_workout_settings')
+        .upsert(updatedSettings);
+
+      if (error) throw error;
+      setWorkoutSettings(updatedSettings);
+      setEditingSchedule(false);
+      setTempWorkoutTypes({});
+      toast.success('Schedule updated successfully');
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      toast.error('Failed to update schedule');
+    }
+  };
+
+  const getScheduledWorkouts = () => {
+    const workouts = [];
+    if (!workoutSettings || !planStartDate) return [];
+
+    const startDate = new Date(planStartDate);
+    const schedule = workoutSettings.schedule;
+    const pattern = getWorkoutPattern(workoutSettings);
+
+    // Generate 4 weeks of workouts
+    for (let week = 0; week < 4; week++) {
+      for (let i = 0; i < 7; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + (week * 7) + i);
+        
+        if (schedule.includes(i)) {
+          const workoutIndex = schedule.indexOf(i);
+          workouts.push({
+            date: currentDate,
+            type: pattern[workoutIndex % pattern.length],
+            duration: workoutSettings.workout_duration,
+            isDeload: (week > 0 && week % workoutSettings.deload_frequency === 0) || week === 3, // Add week 4 condition
+            deloadType: week === 3 ? 'Deload/Recovery Week' : 'Deload Week' // Different label for week 4
+          });
+        }
+      }
+    }
+
+    return workouts;
+  };
+
+  const cycleWorkoutType = (current) => {
+    if (!current) return 'Strength';
+    if (current === 'Strength') return 'Cardio';
+    return null; // back to rest
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column */}
       <div className="lg:col-span-2 space-y-6">
-        {/* Workout Form Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Add Workout</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input 
-              type="date" 
-              value={workoutDate} 
-              onChange={(e) => setWorkoutDate(e.target.value)} 
-              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-            />
-            <input 
-              type="text" 
-              inputMode="numeric"
-              pattern="\d*"
-              placeholder="Strength Volume (lbs)" 
-              value={strengthVolume} 
-              onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
-              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-            />
-            <input 
-              type="text" 
-              inputMode="numeric"
-              pattern="\d*"
-              placeholder="Cardio Load" 
-              value={cardioLoad} 
-              onChange={(e) => handleNumberInput(e, setCardioLoad)} 
-              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-            />
-            <textarea 
-              placeholder="Workout Notes" 
-              value={note} 
-              onChange={(e) => setNote(e.target.value)} 
-              rows="3"
-              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" 
-            />
-            <button 
-              type="submit" 
-              className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all font-medium"
-            >
-              Save Workout
-            </button>
-          </form>
+        {/* Tab Navigation */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setActiveTab('track')}
+            className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'track'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Track Workout
+          </button>
+          <button
+            onClick={() => setActiveTab('plan')}
+            className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'plan'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Make Workout Plan
+          </button>
         </div>
 
-        {/* Add preview section */}
-        {previewLoads && (
-          <div className="lg:col-span-2">
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                Preview Loads
-              </h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p>Strength Acute: {previewLoads.strength_acute_load?.toFixed(2)}</p>
-                  <p>Strength Chronic: {previewLoads.strength_chronic_load?.toFixed(2)}</p>
-                  <p>Strength Ratio: {previewLoads.strength_ratio?.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p>Cardio Acute: {previewLoads.cardio_acute_load?.toFixed(2)}</p>
-                  <p>Cardio Chronic: {previewLoads.cardio_chronic_load?.toFixed(2)}</p>
-                  <p>Cardio Ratio: {previewLoads.cardio_ratio?.toFixed(2)}</p>
+        {activeTab === 'track' ? (
+          <>
+            {/* Existing Workout Form */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Add Workout</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input 
+                  type="date" 
+                  value={workoutDate} 
+                  onChange={(e) => setWorkoutDate(e.target.value)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <input 
+                  type="text" 
+                  inputMode="numeric"
+                  pattern="\d*"
+                  placeholder="Strength Volume (lbs)" 
+                  value={strengthVolume} 
+                  onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <input 
+                  type="text" 
+                  inputMode="numeric"
+                  pattern="\d*"
+                  placeholder="Cardio Load" 
+                  value={cardioLoad} 
+                  onChange={(e) => handleNumberInput(e, setCardioLoad)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <textarea 
+                  placeholder="Workout Notes" 
+                  value={note} 
+                  onChange={(e) => setNote(e.target.value)} 
+                  rows="3"
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" 
+                />
+                <button 
+                  type="submit" 
+                  className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all font-medium"
+                >
+                  Save Workout
+                </button>
+              </form>
+            </div>
+
+            {/* Existing Preview Section */}
+            {previewLoads && (
+              <div className="lg:col-span-2">
+                <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Preview Loads
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p>Strength Acute: {previewLoads.strength_acute_load?.toFixed(2)}</p>
+                      <p>Strength Chronic: {previewLoads.strength_chronic_load?.toFixed(2)}</p>
+                      <p>Strength Ratio: {previewLoads.strength_ratio?.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p>Cardio Acute: {previewLoads.cardio_acute_load?.toFixed(2)}</p>
+                      <p>Cardio Chronic: {previewLoads.cardio_chronic_load?.toFixed(2)}</p>
+                      <p>Cardio Ratio: {previewLoads.cardio_ratio?.toFixed(2)}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+          </>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+                Weekly Workout Plan
+              </h2>
+              {!editingSchedule && (
+                <button
+                  onClick={() => router.push('/workouts/onboarding')}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
+                >
+                  Full Reconfigure
+                </button>
+              )}
             </div>
+
+            {workoutSettings ? (
+              <div className="space-y-6">
+                {/* Date Selection */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Plan Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={planStartDate}
+                    onChange={(e) => setPlanStartDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700"
+                  />
+                </div>
+
+                {/* Schedule Editor */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">Weekly Schedule</h3>
+                    {editingSchedule ? (
+                      <div className="space-x-2">
+                        <button
+                          onClick={handleScheduleUpdate}
+                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSchedule(false);
+                            setTempSchedule([]);
+                          }}
+                          className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          // Initialize workout types from current settings
+                          setTempSchedule(
+                            DAYS.map((_, i) => workoutSettings.schedule.includes(i))
+                          );
+                          const pattern = getWorkoutPattern(workoutSettings);
+                          const types = {};
+                          workoutSettings.schedule.forEach((dayIndex, i) => {
+                            types[dayIndex] = pattern[i % pattern.length];
+                          });
+                          setTempWorkoutTypes(types);
+                          setEditingSchedule(true);
+                        }}
+                        className="text-sm text-blue-500 hover:text-blue-600"
+                      >
+                        Edit Schedule
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-2">
+                    {DAYS.map((day, index) => {
+                      const isWorkoutDay = editingSchedule
+                        ? tempSchedule[index]
+                        : workoutSettings.schedule?.includes(index);
+                      const pattern = getWorkoutPattern(workoutSettings);
+                      const workoutType = editingSchedule
+                        ? tempWorkoutTypes[index]
+                        : (isWorkoutDay && pattern 
+                            ? pattern[workoutSettings.schedule.indexOf(index) % pattern.length]
+                            : null);
+
+                      return (
+                        <div
+                          key={day}
+                          className={`space-y-2 text-center ${
+                            editingSchedule ? 'cursor-pointer' : ''
+                          }`}
+                          onClick={() => {
+                            if (editingSchedule) {
+                              // Cycle through workout types
+                              const nextType = cycleWorkoutType(tempWorkoutTypes[index]);
+                              setTempWorkoutTypes(prev => ({
+                                ...prev,
+                                [index]: nextType
+                              }));
+                              // Update schedule to match (active if has workout type)
+                              const newSchedule = [...tempSchedule];
+                              newSchedule[index] = nextType !== null;
+                              setTempSchedule(newSchedule);
+                            }
+                          }}
+                        >
+                          <div className="text-sm font-medium">{day.slice(0, 3)}</div>
+                          <div className={`text-xs px-2 py-1 rounded ${
+                            workoutType === 'Strength'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                              : workoutType === 'Cardio'
+                                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                                : 'text-gray-400'
+                          }`}>
+                            {workoutType || 'Rest'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Scheduled Workouts */}
+                <div className="space-y-4">
+                  <h3 className="font-medium">Upcoming Workouts</h3>
+                  <div className="divide-y dark:divide-gray-700">
+                    {getScheduledWorkouts()
+                      .slice(0, showAllWorkouts ? undefined : 5)
+                      .map((workout, index) => (
+                        <div key={index} className={`py-3 flex items-center justify-between ${
+                          workout.isDeload ? 'opacity-75' : ''
+                        }`}>
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">
+                              {workout.date.toLocaleDateString('en-US', { 
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric' 
+                              })}
+                            </div>
+                            {workout.isDeload && (
+                              <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                                {workout.deloadType}
+                              </span>
+                            )}
+                          </div>
+                          <div className={`px-3 py-1 rounded-lg text-sm ${
+                            workout.type === 'Strength'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                              : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                          }`}>
+                            {workout.type}
+                            <span className="ml-2 text-xs opacity-75">
+                              {workout.duration}min
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  {getScheduledWorkouts().length > 5 && (
+                    <button
+                      onClick={() => setShowAllWorkouts(!showAllWorkouts)}
+                      className="w-full text-sm text-blue-500 hover:text-blue-600 pt-2"
+                    >
+                      {showAllWorkouts ? 'Show Less' : `Show ${getScheduledWorkouts().length - 5} More`}
+                    </button>
+                  )}
+                </div>
+
+                {/* Current Week Summary */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-4">Current Week</h3>
+                  <div className="grid grid-cols-7 gap-2">
+                    {DAYS.map((day, index) => {
+                      const isWorkoutDay = workoutSettings.schedule?.includes(index);
+                      const pattern = getWorkoutPattern(workoutSettings);
+                      const workoutType = isWorkoutDay && pattern 
+                        ? pattern[workoutSettings.schedule.indexOf(index) % pattern.length]
+                        : null;
+
+                      return (
+                        <div key={day} className="space-y-2 text-center">
+                          <div className="text-sm font-medium">{day.slice(0, 3)}</div>
+                          {workoutType ? (
+                            <div className={`text-xs px-2 py-1 rounded ${
+                              workoutType === 'Strength'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                            }`}>
+                              {workoutType}
+                              <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                {workoutSettings.workout_duration}min
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs px-2 py-1 text-gray-400">
+                              Rest
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Schedule Details */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Schedule Details</h3>
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                    <p>• {workoutSettings.workouts_per_week} workouts per week</p>
+                    <p>• {workoutSettings.workout_duration} minutes per session</p>
+                    <p>• Deload every {workoutSettings.deload_frequency} weeks</p>
+                    <p>• Experience Level: {
+                      workoutSettings.training_experience >= 3
+                        ? 'Advanced'
+                        : workoutSettings.training_experience >= 1
+                          ? 'Intermediate'
+                          : 'Beginner'
+                    }</p>
+                  </div>
+                </div>
+
+                {/* Goals Section */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Current Goals</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {workoutSettings.goals?.map(goal => (
+                      <span key={goal} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded text-sm">
+                        {goal.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  No workout plan set up yet
+                </p>
+                <button
+                  onClick={() => router.push('/workouts/onboarding')}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Create Workout Plan
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -498,6 +836,7 @@ export default function WorkoutTracker() {
         onReplace={() => saveWorkout(pendingWorkout, 'replace')}
         onEdit={handleEdit}
       />
+
       <HydrationGuide 
         isOpen={showHydrationGuide} 
         onClose={() => {
@@ -507,6 +846,7 @@ export default function WorkoutTracker() {
         isSaving={isSaving}
         error={saveError}
       />
+
       <ExpandedGraphModal
         isOpen={isGraphExpanded}
         onClose={() => setIsGraphExpanded(false)}
