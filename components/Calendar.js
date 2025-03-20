@@ -119,22 +119,22 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full bg-gray-900 text-white rounded-lg p-4">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-800 dark:text-white">
+        <h3 className="font-semibold text-lg">
           {formatMonthYear(currentMonth)}
         </h3>
         <div className="flex space-x-2">
           <button 
             onClick={goToToday}
-            className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
+            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Today
           </button>
           <button 
             onClick={prevMonth}
-            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="p-1 rounded-full hover:bg-gray-700"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -142,7 +142,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
           </button>
           <button 
             onClick={nextMonth}
-            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="p-1 rounded-full hover:bg-gray-700"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -154,7 +154,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
       {/* Weekday Headers */}
       <div className="grid grid-cols-7 gap-1 mb-1 text-center">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-gray-500 text-xs font-medium py-1">
+          <div key={day} className="text-gray-400 text-xs font-medium py-1">
             {day}
           </div>
         ))}
@@ -176,29 +176,36 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
               key={idx}
               onClick={() => onSelectDate(day.date)}
               className={`
-                relative h-12 p-1 border border-gray-200 dark:border-gray-700 rounded-md 
-                ${!day.isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800/50 opacity-50' : ''}
+                relative h-24 p-2 border border-gray-700 rounded-md 
+                ${!day.isCurrentMonth ? 'bg-gray-800 opacity-50' : 'bg-gray-900'}
                 ${isSelected ? 'ring-2 ring-blue-500' : ''}
-                ${day.isToday ? 'border-blue-500 dark:border-blue-500' : ''}
-                hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors
+                ${day.isToday ? 'border-blue-500' : ''}
+                hover:bg-gray-700 cursor-pointer transition-colors
               `}
             >
               <div className={`
                 text-xs font-medium 
-                ${day.isToday ? 'text-blue-600 dark:text-blue-400' : ''}
+                ${day.isToday ? 'text-blue-400' : 'text-gray-400'}
               `}>
                 {day.date.getDate()}
               </div>
 
               {/* Workout indicator */}
               {workout && (
-                <div 
-                  className={`
-                    absolute bottom-1 right-1 w-3 h-3 rounded-full
-                    ${workout.type === 'Strength' ? 'bg-blue-500' : 'bg-orange-500'}
-                  `}
-                  title={workout.type}
-                ></div>
+                <div className="mt-2 space-y-1">
+                  {workout.strength_volume > 0 && (
+                    <div className="flex items-center space-x-1 text-green-500">
+                      <span role="img" aria-label="strength">💪</span>
+                      <span>{workout.strength_volume}</span>
+                    </div>
+                  )}
+                  {workout.cardio_load > 0 && (
+                    <div className="flex items-center space-x-1 text-red-500">
+                      <span role="img" aria-label="cardio">❤️</span>
+                      <span>{workout.cardio_load}</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           );

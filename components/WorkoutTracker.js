@@ -550,8 +550,8 @@ export default function WorkoutTracker() {
             )}
             
             {/* Calendar View */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Calendar</h2>
+            <div className="bg-gray-900 text-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-xl font-semibold mb-4">Calendar</h2>
               <Calendar 
                 workouts={(getScheduledWorkouts() || []).concat(
                   (history || []).filter(entry => !entry.planned).map(entry => ({
