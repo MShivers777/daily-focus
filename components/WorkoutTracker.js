@@ -355,7 +355,7 @@ export default function WorkoutTracker() {
     };
   };
 
-  const calculateProgressiveLoads = (baseLoads, totalWeeks = 4) => {
+  const calculateProgressiveLoads = (baseLoads, totalWeeks = 16) => {
     const progressionRate = 1.1; // 10% increase per week
     const deloadFactor = 0.5;   // 50% reduction for deload
     const loads = [];
@@ -366,7 +366,7 @@ export default function WorkoutTracker() {
     let lastNonDeloadCardio = currentCardio;
 
     for (let week = 0; week < totalWeeks; week++) {
-      // On week 4 (index 3), do deload. After deload, repeat last non-deload values
+      // On week 4 (index 3), 8 (index 7), 12 (index 11), 16 (index 15) do deload
       if ((week + 1) % 4 === 0) {
         // Deload week
         currentStrength = Math.round(lastNonDeloadStrength * deloadFactor);
@@ -403,12 +403,12 @@ export default function WorkoutTracker() {
     const schedule = workoutSettings.schedule;
     const pattern = getWorkoutPattern(workoutSettings);
     
-    // Get latest loads and calculate progressive loads for 4 weeks
+    // Get latest loads and calculate progressive loads for 16 weeks
     const baseLoads = getLatestLoads(history);
-    const weeklyLoads = calculateProgressiveLoads(baseLoads, 4);
+    const weeklyLoads = calculateProgressiveLoads(baseLoads, 16);
 
-    // Generate 4 weeks of workouts
-    for (let week = 0; week < 4; week++) {
+    // Generate 16 weeks of workouts
+    for (let week = 0; week < 16; week++) {
       for (let i = 0; i < 7; i++) {
         const currentDate = new Date(startDate);
         currentDate.setDate(startDate.getDate() + (week * 7) + i);
@@ -416,7 +416,7 @@ export default function WorkoutTracker() {
         if (schedule.includes(i)) {
           const workoutIndex = schedule.indexOf(i);
           const workoutType = pattern[workoutIndex % pattern.length];
-          const isDeload = week === 3; // Fourth week is always deload
+          const isDeload = (week + 1) % 4 === 0; // Every 4th week is deload
           const weeklyLoad = weeklyLoads[week];
 
           workouts.push({
