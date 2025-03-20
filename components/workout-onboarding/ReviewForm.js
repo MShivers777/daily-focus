@@ -3,75 +3,9 @@ import { useState } from 'react';
 import { DndContext, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { BASE_WORKOUT_SCHEDULE } from '../../utils/workoutSchedules';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-// Add base workout plan
-const BASE_WORKOUT_SCHEDULE = {
-  beginner: {
-    1: {
-      pattern: ['Strength']  // Full body strength for single day
-    },
-    2: {
-      pattern: ['Strength', 'Cardio']
-    },
-    3: {
-      pattern: ['Strength', 'Cardio', 'Strength']
-    },
-    4: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio']
-    },
-    5: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
-    },
-    7: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
-    }
-  },
-  intermediate: {
-    1: {
-      pattern: ['Strength']
-    },
-    2: {
-      pattern: ['Strength', 'Cardio']
-    },
-    3: {
-      pattern: ['Strength', 'Cardio', 'Strength']
-    },
-    4: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio']
-    },
-    5: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
-    },
-    6: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio']
-    },
-    7: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
-    }
-  },
-  advanced: {
-    1: {
-      pattern: ['Strength']
-    },
-    2: {
-      pattern: ['Strength', 'Cardio']
-    },
-    4: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio']
-    },
-    5: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
-    },
-    6: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio']
-    },
-    7: {
-      pattern: ['Strength', 'Cardio', 'Strength', 'Cardio', 'Strength', 'Cardio', 'Strength']
-    }
-  }
-};
 
 function generateWorkoutPlan(formData) {
   const selectedDays = formData.schedule

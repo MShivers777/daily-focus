@@ -13,6 +13,7 @@ import WorkoutHistoryItem from './WorkoutHistoryItem';
 import { useRouter } from 'next/navigation';
 import { calculateLoads, previewWorkoutLoads, validateLoads } from '../utils/loadCalculations';
 import ExpandedGraphModal from './ExpandedGraphModal';
+import { BASE_WORKOUT_SCHEDULE, fetchUserWorkoutSettings } from '../utils/workoutSchedules';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -53,28 +54,21 @@ export default function WorkoutTracker() {
   useEffect(() => {
     fetchHistory();
     
-    // Add settings fetch
-    const fetchWorkoutSettings = async () => {
+    const fetchSettings = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const { data, error } = await supabase
-          .from('user_workout_settings')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (error) throw error;
-        setWorkoutSettings(data);
+        const data = await fetchUserWorkoutSettings(supabase, session.user.id);
+        if (data) {
+          setWorkoutSettings(data);
+        }
       } catch (error) {
         console.error('Error fetching workout settings:', error);
       }
     };
 
-    fetchWorkoutSettings();
+    fetchSettings();
   }, []);
 
   // Add this effect to update preview loads when form changes
@@ -86,7 +80,12 @@ export default function WorkoutTracker() {
         cardio_load: parseInt(cardioLoad) || 0,
         note: note
       };
-      const preview = previewWorkoutLoads(history, previewWorkout);
+      
+      // Get actual deload frequency from settings or use default
+      const preview = previewWorkoutLoads(
+        history, 
+        previewWorkout
+      );
       setPreviewLoads(preview);
     } else {
       setPreviewLoads(null);
@@ -121,6 +120,18 @@ export default function WorkoutTracker() {
     }
   };
 
+  const getWorkoutTypeForDate = (date) => {
+    if (!workoutSettings?.schedule) return 'mixed';
+
+    const dayIndex = new Date(date).getDay();
+    const scheduleIndex = workoutSettings.schedule.indexOf(dayIndex);
+    
+    if (scheduleIndex === -1) return 'unscheduled';
+
+    const pattern = getWorkoutPattern(workoutSettings);
+    return pattern?.[scheduleIndex % pattern.length] || 'mixed';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -137,6 +148,7 @@ export default function WorkoutTracker() {
         cardio_load: parseInt(cardioLoad) || 0,
         note: note,
         user_id: session.user.id,
+        workout_type: getWorkoutTypeForDate(workoutDate),
         planned: false  // Ensure completed workouts are not marked as planned
       };
 
@@ -192,7 +204,8 @@ export default function WorkoutTracker() {
         strength_volume: parseInt(data.strength_volume) || 0,
         cardio_load: parseInt(data.cardio_load) || 0,
         note: data.note || '',
-        user_id: session.user.id
+        user_id: session.user.id,
+        workout_type: data.workout_type || getWorkoutTypeForDate(data.workout_date)
       };
 
       let response;
@@ -277,6 +290,20 @@ export default function WorkoutTracker() {
 
   const handleHistoryDoubleClick = () => {
     router.push('/workouts/history');
+  };
+
+  // Add BASE_WORKOUT_SCHEDULE constant at the top of the file
+  const getWorkoutPattern = (workoutSettings) => {
+    if (!workoutSettings) return null;
+
+    const experienceLevel = workoutSettings.training_experience >= 3 
+      ? 'advanced' 
+      : workoutSettings.training_experience >= 1 
+        ? 'intermediate' 
+        : 'beginner';
+    
+    const daysPerWeek = workoutSettings.schedule.length;
+    return BASE_WORKOUT_SCHEDULE[experienceLevel][daysPerWeek]?.pattern;
   };
 
   return (
@@ -390,7 +417,7 @@ export default function WorkoutTracker() {
           </div>
         </div>
 
-        {/* Schedule Card - Add this before History Card */}
+        {/* Updated Schedule Card */}
         {workoutSettings && (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
@@ -399,16 +426,29 @@ export default function WorkoutTracker() {
             <div className="grid grid-cols-7 gap-2 text-center mb-4">
               {DAYS.map((day, index) => {
                 const isWorkoutDay = workoutSettings.schedule?.includes(index);
+                const pattern = getWorkoutPattern(workoutSettings);
+                const workoutType = isWorkoutDay && pattern 
+                  ? pattern[workoutSettings.schedule.indexOf(index) % pattern.length]
+                  : null;
+
                 return (
-                  <div
-                    key={day}
-                    className={`p-2 rounded-lg text-sm ${
+                  <div key={day} className="space-y-1">
+                    <div className={`p-2 rounded-lg text-sm ${
                       isWorkoutDay
-                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
-                        : 'bg-gray-50 dark:bg-gray-700/50 text-gray-400'
-                    }`}
-                  >
-                    {day.slice(0, 3)}
+                        ? 'bg-gray-50 dark:bg-gray-700/50'
+                        : 'text-gray-400'
+                    }`}>
+                      {day.slice(0, 3)}
+                    </div>
+                    {workoutType && (
+                      <div className={`text-xs px-2 py-1 rounded ${
+                        workoutType === 'Strength'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                      }`}>
+                        {workoutType}
+                      </div>
+                    )}
                   </div>
                 );
               })}
