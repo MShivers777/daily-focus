@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getWorkoutTypeLabel } from '../utils/workoutSchedules';
 
-function Calendar({ workouts = [], selectedDate, onSelectDate }) {
+function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWorkout }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState([]);
 
@@ -59,9 +60,9 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
     setCalendarDays(days);
   }, [currentMonth]);
 
-  // Get workout for a specific day - fixed comparison
-  const getWorkoutForDay = (date) => {
-    if (!workouts || !Array.isArray(workouts) || workouts.length === 0) return null;
+  // Get workouts for a specific day - updated to return an array
+  const getWorkoutsForDay = (date) => {
+    if (!workouts || !Array.isArray(workouts) || workouts.length === 0) return [];
     
     // Format the date as YYYY-MM-DD for comparison
     const year = date.getFullYear();
@@ -69,7 +70,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
     const day = String(date.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
     
-    return workouts.find(workout => {
+    return workouts.filter(workout => {
       // Handle both date objects and string dates in workout data
       if (!workout) return false;
       
@@ -163,7 +164,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1">
         {calendarDays.map((day, idx) => {
-          const workout = getWorkoutForDay(day.date);
+          const dayWorkouts = getWorkoutsForDay(day.date);
           
           // Safe selected date comparison
           const isSelected = selectedDate && day.date && 
@@ -175,6 +176,11 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
             <div
               key={idx}
               onClick={() => onSelectDate(day.date)}
+              onDoubleClick={() => {
+                if (dayWorkouts.length > 0) {
+                  onDoubleClickWorkout(dayWorkouts);
+                }
+              }}
               className={`
                 relative h-24 p-2 border border-gray-700 rounded-md 
                 ${!day.isCurrentMonth ? 'bg-gray-800 opacity-50' : 'bg-gray-900'}
@@ -190,19 +196,44 @@ function Calendar({ workouts = [], selectedDate, onSelectDate }) {
                 {day.date.getDate()}
               </div>
 
-              {/* Workout indicator */}
-              {workout && (
-                <div className="mt-2 space-y-1">
-                  {workout.strength_volume > 0 && (
-                    <div className="flex items-center space-x-1 text-green-500">
-                      <span role="img" aria-label="strength">💪</span>
-                      <span>{workout.strength_volume}</span>
-                    </div>
-                  )}
-                  {workout.cardio_load > 0 && (
-                    <div className="flex items-center space-x-1 text-red-500">
-                      <span role="img" aria-label="cardio">❤️</span>
-                      <span>{workout.cardio_load}</span>
+              {/* Multiple workout indicators */}
+              {dayWorkouts.length > 0 && (
+                <div className="mt-2 space-y-1 text-xs max-h-16 overflow-y-auto">
+                  {dayWorkouts.slice(0, 2).map((workout, index) => {
+                    // If workout.type is an object, extract type and subtype.
+                    const workoutType = typeof workout.type === 'object' ? workout.type.type : workout.type;
+                    const workoutSubtype = typeof workout.type === 'object' ? workout.type.subtype : workout.subtype;
+                    // Use getWorkoutTypeLabel to get a proper string
+                    const workoutLabel = workoutSubtype ? getWorkoutTypeLabel(workoutType, workoutSubtype) : (workoutType || 'Workout');
+
+                    return (
+                      <div 
+                        key={index} 
+                        className={`flex items-center justify-between ${
+                          workoutType === 'Strength' ? 'text-blue-400' : 'text-orange-400'
+                        }`}
+                      >
+                        <div className="truncate">{workoutLabel}</div>
+                        <div className="flex gap-1 text-xs">
+                          {workout.strength_volume > 0 && (
+                            <span className="text-green-500">
+                              {workout.strength_volume}
+                            </span>
+                          )}
+                          {workout.cardio_load > 0 && (
+                            <span className="text-red-500">
+                              {workout.cardio_load}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Show indicator for additional workouts */}
+                  {dayWorkouts.length > 2 && (
+                    <div className="text-xs text-gray-400">
+                      +{dayWorkouts.length - 2} more
                     </div>
                   )}
                 </div>

@@ -13,8 +13,10 @@ import WorkoutHistoryItem from './WorkoutHistoryItem';
 import { useRouter } from 'next/navigation';
 import { calculateLoads, previewWorkoutLoads, validateLoads } from '../utils/loadCalculations';
 import ExpandedGraphModal from './ExpandedGraphModal';
-import { BASE_WORKOUT_SCHEDULE, fetchUserWorkoutSettings } from '../utils/workoutSchedules';
+import { BASE_WORKOUT_SCHEDULE, fetchUserWorkoutSettings, getWorkoutTypeLabel } from '../utils/workoutSchedules';
 import Calendar from './Calendar';
+import WorkoutTypeSelector from './WorkoutTypeSelector';
+import WorkoutDetailsModal from './WorkoutDetailsModal'; // Import the modal component
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -61,6 +63,10 @@ export default function WorkoutTracker() {
   const [tempWorkoutTypes, setTempWorkoutTypes] = useState({});
   const [showAllWorkouts, setShowAllWorkouts] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [editingWorkoutDay, setEditingWorkoutDay] = useState(null);
+  const [scheduledWorkouts, setScheduledWorkouts] = useState([]);
+  const [selectedWorkoutsForModal, setSelectedWorkoutsForModal] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -102,6 +108,11 @@ export default function WorkoutTracker() {
     }
   }, [workoutDate, strengthVolume, cardioLoad, history]);
 
+  // Add this effect to update the scheduled workouts when plan start date changes
+  useEffect(() => {
+    setScheduledWorkouts(getScheduledWorkouts());
+  }, [planStartDate, workoutSettings, history]);
+
   // Copy all the workout-related functions from the dashboard
   const fetchHistory = async () => {
     try {
@@ -132,6 +143,14 @@ export default function WorkoutTracker() {
     const dayIndex = new Date(date).getDay();
     const scheduleIndex = workoutSettings.schedule.indexOf(dayIndex);
     if (scheduleIndex === -1) return 'unscheduled';
+    
+    // Check for specific workout types in the workout settings
+    if (workoutSettings.workout_types && workoutSettings.workout_types[dayIndex]) {
+      // Return the type string, not the object
+      const workoutType = workoutSettings.workout_types[dayIndex];
+      return workoutType.type || 'mixed';
+    }
+    
     const pattern = getWorkoutPattern(workoutSettings);
     return pattern?.[scheduleIndex % pattern.length] || 'mixed';
   };
@@ -307,14 +326,17 @@ export default function WorkoutTracker() {
 
       // Get days that have workouts assigned
       const schedule = Object.entries(tempWorkoutTypes)
-        .filter(([_, type]) => type !== null)
+        .filter(([_, workouts]) => workouts && Array.isArray(workouts) && workouts.length > 0)
         .map(([index]) => parseInt(index));
 
       // Create workout_types object with the custom pattern
       const workout_types = {};
-      schedule.forEach((dayIndex, i) => {
-        workout_types[dayIndex] = tempWorkoutTypes[dayIndex];
-      });
+      
+      Object.entries(tempWorkoutTypes)
+        .filter(([_, workouts]) => workouts && Array.isArray(workouts) && workouts.length > 0)
+        .forEach(([dayIndex, workouts]) => {
+          workout_types[dayIndex] = workouts;
+        });
 
       const updatedSettings = {
         ...workoutSettings,
@@ -400,8 +422,8 @@ export default function WorkoutTracker() {
     if (!workoutSettings || !planStartDate) return [];
 
     const startDate = new Date(planStartDate);
-    const schedule = workoutSettings.schedule;
-    const pattern = getWorkoutPattern(workoutSettings);
+    const schedule = workoutSettings.schedule || [];
+    const workoutTypes = workoutSettings.workout_types || {};
     
     // Get latest loads and calculate progressive loads for 16 weeks
     const baseLoads = getLatestLoads(history);
@@ -414,20 +436,42 @@ export default function WorkoutTracker() {
         currentDate.setDate(startDate.getDate() + (week * 7) + i);
         
         if (schedule.includes(i)) {
-          const workoutIndex = schedule.indexOf(i);
-          const workoutType = pattern[workoutIndex % pattern.length];
           const isDeload = (week + 1) % 4 === 0; // Every 4th week is deload
           const weeklyLoad = weeklyLoads[week];
+          
+          // Get the workout type(s) for this day
+          let dayWorkouts = workoutTypes[i];
+          
+          // Normalize dayWorkouts to always be an array
+          if (!dayWorkouts) {
+            // No workouts defined, use default
+            dayWorkouts = [{
+              type: 'Strength',
+              subtype: null
+            }];
+          } else if (!Array.isArray(dayWorkouts)) {
+            // Single workout object - convert to array
+            dayWorkouts = [{
+              type: dayWorkouts.type || 'Strength',
+              subtype: dayWorkouts.subtype || null
+            }];
+          }
 
-          workouts.push({
-            date: currentDate,
-            type: workoutType,
-            duration: workoutSettings.workout_duration,
-            isDeload,
-            deloadType: 'Recovery/Deload Week',
-            planned: true,
-            strength_volume: workoutType === 'Strength' ? weeklyLoad.strength : 0,
-            cardio_load: workoutType === 'Cardio' ? weeklyLoad.cardio : 0
+          // Now dayWorkouts is guaranteed to be an array
+          dayWorkouts.forEach(workout => {
+            if (workout && workout.type) { // Add extra validation
+              workouts.push({
+                date: currentDate,
+                type: workout.type,
+                subtype: workout.subtype || null,
+                duration: workoutSettings.workout_duration || 60,
+                isDeload,
+                deloadType: 'Recovery/Deload Week',
+                planned: true,
+                strength_volume: workout.type === 'Strength' ? weeklyLoad.strength : 0,
+                cardio_load: workout.type === 'Cardio' ? weeklyLoad.cardio : 0
+              });
+            }
           });
         }
       }
@@ -436,20 +480,67 @@ export default function WorkoutTracker() {
     return workouts;
   };
 
-  const cycleWorkoutType = (current) => {
-    if (!current) return 'Strength';
-    if (current === 'Strength') return 'Cardio';
-    return null; // back to rest
+  const cycleWorkoutType = (current, subtype) => {
+    if (!current) return { type: 'Strength', subtype: null };
+    if (current === 'Strength') return { type: 'Cardio', subtype: null };
+    return { type: null, subtype: null }; // back to rest
+  };
+
+  const handleWorkoutTypeSelect = (dayIndex, selectedWorkouts) => {
+    // If selectedWorkouts is not an array, wrap it in an array
+    const workoutsArray = Array.isArray(selectedWorkouts) ? selectedWorkouts : 
+                          (selectedWorkouts ? [selectedWorkouts] : []);
+    setTempWorkoutTypes(prev => ({
+      ...prev,
+      [dayIndex]: workoutsArray
+    }));
+    
+    // Update schedule to match (active if has workout types)
+    const newSchedule = [...tempSchedule];
+    newSchedule[dayIndex] = workoutsArray.length > 0;
+    setTempSchedule(newSchedule);
+    setEditingWorkoutDay(null);
   };
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
     setWorkoutDate(date.toISOString().split('T')[0]);
-    
     // If we're on the tracking tab, scroll to the form
     if (activeTab === 'track') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const handleEditScheduleClick = () => {
+    const schedule = workoutSettings?.schedule || [];
+    const types = workoutSettings?.workout_types || {};
+    
+    setTempSchedule(DAYS.map((_, i) => schedule.includes(i)));
+    
+    // Initialize temp workout types
+    const initialWorkoutTypes = {};
+    DAYS.forEach((_, i) => {
+      if (schedule.includes(i)) {
+        const existingType = types[i];
+        initialWorkoutTypes[i] = Array.isArray(existingType) ? existingType : 
+          existingType ? [existingType] : [{ type: 'Strength', subtype: null }];
+      } else {
+        initialWorkoutTypes[i] = [];
+      }
+    });
+    
+    setTempWorkoutTypes(initialWorkoutTypes);
+    setEditingSchedule(true);
+  };
+
+  const handleDoubleClickWorkout = (workouts) => {
+    setSelectedWorkoutsForModal(workouts);
+    setIsModalOpen(true); // Open the modal
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false); // Close the modal
+    setSelectedWorkoutsForModal([]);
   };
 
   return (
@@ -548,9 +639,9 @@ export default function WorkoutTracker() {
                 </div>
               </div>
             )}
-            
+
             {/* Calendar View */}
-            <div className="bg-gray-900 text-white rounded-lg p-6 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-semibold mb-4">Calendar</h2>
               <Calendar 
                 workouts={(getScheduledWorkouts() || []).concat(
@@ -561,15 +652,14 @@ export default function WorkoutTracker() {
                 )}
                 selectedDate={selectedDate}
                 onSelectDate={handleDateSelect}
+                onDoubleClickWorkout={handleDoubleClickWorkout} // Pass the handler
               />
             </div>
           </>
         ) : (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-                Weekly Workout Plan
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Weekly Workout Plan</h2>
               {!editingSchedule && (
                 <button
                   onClick={() => router.push('/workouts/onboarding')}
@@ -582,8 +672,8 @@ export default function WorkoutTracker() {
 
             {workoutSettings ? (
               <div className="space-y-6">
-                {/* Date Selection */}
-                <div className="space-y-2">
+                {/* Plan Start Date Selection */}
+                <div className="space-y-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Plan Start Date
                   </label>
@@ -591,14 +681,14 @@ export default function WorkoutTracker() {
                     type="date"
                     value={planStartDate}
                     onChange={(e) => setPlanStartDate(e.target.value)}
+                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700"
                   />
                 </div>
 
                 {/* Schedule Editor */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
                     <h3 className="font-medium">Weekly Schedule</h3>
                     {editingSchedule ? (
                       <div className="space-x-2">
@@ -612,6 +702,7 @@ export default function WorkoutTracker() {
                           onClick={() => {
                             setEditingSchedule(false);
                             setTempSchedule([]);
+                            setEditingWorkoutDay(null);
                           }}
                           className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
                         >
@@ -620,17 +711,7 @@ export default function WorkoutTracker() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => {
-                          // Initialize workout types from current settings
-                          const schedule = workoutSettings.schedule || [];
-                          const types = workoutSettings.workout_types || {};
-                          
-                          setTempSchedule(
-                            DAYS.map((_, i) => schedule.includes(i))
-                          );
-                          setTempWorkoutTypes(types);
-                          setEditingSchedule(true);
-                        }}
+                        onClick={handleEditScheduleClick}
                         className="text-sm text-blue-500 hover:text-blue-600"
                       >
                         Edit Schedule
@@ -640,15 +721,13 @@ export default function WorkoutTracker() {
 
                   <div className="grid grid-cols-7 gap-2">
                     {DAYS.map((day, index) => {
+                      const workouts = editingSchedule
+                        ? (tempWorkoutTypes[index] || [])
+                        : (workoutSettings?.workout_types?.[index] || []);
+                        
                       const isWorkoutDay = editingSchedule
                         ? tempSchedule[index]
-                        : workoutSettings.schedule?.includes(index);
-                      const pattern = getWorkoutPattern(workoutSettings);
-                      const workoutType = editingSchedule
-                        ? tempWorkoutTypes[index]
-                        : (isWorkoutDay && pattern 
-                            ? pattern[workoutSettings.schedule.indexOf(index) % pattern.length]
-                            : null);
+                        : workoutSettings?.schedule?.includes(index);
 
                       return (
                         <div
@@ -658,40 +737,78 @@ export default function WorkoutTracker() {
                           }`}
                           onClick={() => {
                             if (editingSchedule) {
-                              // Cycle through workout types
-                              const nextType = cycleWorkoutType(tempWorkoutTypes[index]);
-                              setTempWorkoutTypes(prev => ({
-                                ...prev,
-                                [index]: nextType
-                              }));
-                              // Update schedule to match (active if has workout type)
-                              const newSchedule = [...tempSchedule];
-                              newSchedule[index] = nextType !== null;
-                              setTempSchedule(newSchedule);
+                              setEditingWorkoutDay(index);
                             }
                           }}
                         >
                           <div className="text-sm font-medium">{day.slice(0, 3)}</div>
                           <div className={`text-xs px-2 py-1 rounded ${
-                            workoutType === 'Strength'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                              : workoutType === 'Cardio'
-                                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
-                                : 'text-gray-400'
+                            workouts.length > 0
+                              ? workouts[0]?.type === 'Strength'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                              : 'text-gray-400'
                           }`}>
-                            {workoutType || 'Rest'}
+                            {isWorkoutDay ? (
+                              <div className="truncate max-w-full">
+                                {workouts.length === 0
+                                  ? 'Rest'
+                                  : workouts.length === 1
+                                    ? getWorkoutTypeLabel(
+                                        workouts[0]?.type || '',
+                                        workouts[0]?.subtype || ''
+                                      )
+                                    : `${workouts.length} workouts`}
+                              </div>
+                            ) : (
+                              'Rest'
+                            )}
                           </div>
+                          
+                          {/* Show badges for multiple workouts */}
+                          {workouts.length > 1 && (
+                            <div className="flex justify-center gap-1 mt-1">
+                              {workouts.slice(0, 3).map((workout, i) => (
+                                <span 
+                                  key={i} 
+                                  className={`w-2 h-2 rounded-full ${
+                                    workout.type === 'Strength' 
+                                      ? 'bg-blue-500' 
+                                      : 'bg-orange-500'
+                                  }`}
+                                />
+                              ))}
+                              {workouts.length > 3 && (
+                                <span className="text-xs text-gray-500">
+                                  +{workouts.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Workout Type Selector Modal */}
+                  {editingWorkoutDay !== null && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                      <div className="max-w-md w-full">
+                        <WorkoutTypeSelector
+                          workoutType={tempWorkoutTypes[editingWorkoutDay] || []}
+                          onSelect={(workouts) => handleWorkoutTypeSelect(editingWorkoutDay, workouts)}
+                          onCancel={() => setEditingWorkoutDay(null)}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Scheduled Workouts */}
                 <div className="space-y-4">
                   <h3 className="font-medium">Upcoming Workouts</h3>
                   <div className="divide-y dark:divide-gray-700">
-                    {getScheduledWorkouts()
+                    {scheduledWorkouts
                       .slice(0, showAllWorkouts ? undefined : 5)
                       .map((workout, index) => (
                         <div key={index} className={`py-3 flex items-center justify-between ${
@@ -710,6 +827,7 @@ export default function WorkoutTracker() {
                                 {workout.deloadType}
                               </span>
                             )}
+                            {/* Show load metrics */}
                             <div className="text-xs text-gray-500">
                               {workout.type === 'Strength' 
                                 ? `Volume: ${workout.strength_volume}`
@@ -717,25 +835,32 @@ export default function WorkoutTracker() {
                               }
                             </div>
                           </div>
-                          <div className={`px-3 py-1 rounded-lg text-sm ${
+                          <div className={`px-3 py-1 rounded-lg ${
                             workout.type === 'Strength'
                               ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
                               : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
                           }`}>
-                            {workout.type}
-                            <span className="ml-2 text-xs opacity-75">
-                              {workout.duration}min
-                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className="font-medium">
+                                {workout.subtype 
+                                  ? getWorkoutTypeLabel(workout.type, workout.subtype)
+                                  : workout.type
+                                }
+                              </span>
+                              <span className="text-xs opacity-75">
+                                {workout.duration}min
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ))}
                   </div>
-                  {getScheduledWorkouts().length > 5 && (
+                  {scheduledWorkouts.length > 5 && (
                     <button
                       onClick={() => setShowAllWorkouts(!showAllWorkouts)}
                       className="w-full text-sm text-blue-500 hover:text-blue-600 pt-2"
                     >
-                      {showAllWorkouts ? 'Show Less' : `Show ${getScheduledWorkouts().length - 5} More`}
+                      {showAllWorkouts ? 'Show Less' : `Show ${scheduledWorkouts.length - 5} More`}
                     </button>
                   )}
                 </div>
@@ -937,6 +1062,14 @@ export default function WorkoutTracker() {
           expanded={true}
         />
       </ExpandedGraphModal>
+
+      {/* Workout Details Modal */}
+      {isModalOpen && (
+        <WorkoutDetailsModal 
+          workouts={selectedWorkoutsForModal}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 }
