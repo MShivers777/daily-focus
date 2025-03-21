@@ -177,6 +177,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
               key={idx}
               onClick={() => onSelectDate(day.date)}
               onDoubleClick={() => {
+                // Trigger modal for the entire day
                 if (dayWorkouts.length > 0) {
                   onDoubleClickWorkout(dayWorkouts);
                 }
