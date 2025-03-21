@@ -367,118 +367,160 @@ export default function WorkoutTracker() {
     }
   };
 
-  const getLatestLoads = (history) => {
-    const latestWorkout = history[0];
+const getLatestLoads = (history, previousWeekDate) => {
+  // Find the most recent workout from the previous week
+  const previousWeekWorkout = history.find(workout => {
+    const workoutDate = new Date(workout.workout_date);
+    return workoutDate <= previousWeekDate;
+  });
+
+  // If we found a previous week's workout, use its values
+  if (previousWeekWorkout) {
     return {
-      strengthChronic: latestWorkout?.strength_chronic_load || 100, // default starting value
-      cardioChronic: latestWorkout?.cardio_chronic_load || 50,     // default starting value
-      strengthVolume: latestWorkout?.strength_volume || 100,        // last actual volume
-      cardioLoad: latestWorkout?.cardio_load || 50                 // last actual load
+      strengthVolume: previousWeekWorkout.strength_volume,
+      cardioLoad: previousWeekWorkout.cardio_load,
+      strengthRatio: previousWeekWorkout.strength_ratio || 1.0,
+      cardioRatio: previousWeekWorkout.cardio_ratio || 1.0
     };
+  }
+
+  // If no previous workout, fall back to chronic loads or defaults
+  const latestWorkout = history[0];
+  return {
+    strengthVolume: latestWorkout?.strength_chronic_load || 100,
+    cardioLoad: latestWorkout?.cardio_chronic_load || 50,
+    strengthRatio: 1.0,
+    cardioRatio: 1.0
   };
+};
 
-  const calculateProgressiveLoads = (baseLoads, totalWeeks = 16) => {
-    const progressionRate = 1.1; // 10% increase per week
-    const deloadFactor = 0.5;   // 50% reduction for deload
-    const loads = [];
+const calculateProgressiveLoads = (baseLoads, totalWeeks = 16) => {
+  const loads = [];
+  let currentStrength = baseLoads.strengthVolume;
+  let currentCardio = baseLoads.cardioLoad;
+  let strengthRatio = baseLoads.strengthRatio;
+  let cardioRatio = baseLoads.cardioRatio;
 
-    let currentStrength = baseLoads.strengthVolume;
-    let currentCardio = baseLoads.cardioLoad;
-    let lastNonDeloadStrength = currentStrength;
-    let lastNonDeloadCardio = currentCardio;
+  // Store last non-deload values to resume after deload weeks
+  let lastNonDeloadStrength = currentStrength;
+  let lastNonDeloadCardio = currentCardio;
+  let lastNonDeloadStrengthRatio = strengthRatio;
+  let lastNonDeloadCardioRatio = cardioRatio;
 
-    for (let week = 0; week < totalWeeks; week++) {
-      // On week 4 (index 3), 8 (index 7), 12 (index 11), 16 (index 15) do deload
-      if ((week + 1) % 4 === 0) {
-        // Deload week
-        currentStrength = Math.round(lastNonDeloadStrength * deloadFactor);
-        currentCardio = Math.round(lastNonDeloadCardio * deloadFactor);
-      } else if (week % 4 === 0 && week > 0) {
-        // First week after deload - reset to last non-deload values
+  for (let week = 0; week < totalWeeks; week++) {
+    const isDeloadWeek = (week + 1) % 4 === 0;
+    
+    if (isDeloadWeek) {
+      // Deload week - reduce volume but maintain intensity
+      currentStrength = Math.round(lastNonDeloadStrength * 0.5);
+      currentCardio = Math.round(lastNonDeloadCardio * 0.5);
+      strengthRatio = 0.8;
+      cardioRatio = 0.8;
+    } else {
+      if (week % 4 === 0 && week > 0) {
+        // First week after deload - return to pre-deload levels
         currentStrength = lastNonDeloadStrength;
         currentCardio = lastNonDeloadCardio;
-      } else {
-        // Progressive overload
-        if (week > 0) {
-          currentStrength = Math.round(currentStrength * progressionRate);
-          currentCardio = Math.round(currentCardio * progressionRate);
-        }
-        // Store non-deload values
-        lastNonDeloadStrength = currentStrength;
-        lastNonDeloadCardio = currentCardio;
-      }
-
-      loads.push({
-        strength: currentStrength,
-        cardio: currentCardio
-      });
-    }
-
-    return loads;
-  };
-
-  const getScheduledWorkouts = () => {
-    const workouts = [];
-    if (!workoutSettings || !planStartDate) return [];
-
-    const startDate = new Date(planStartDate);
-    const schedule = workoutSettings.schedule || [];
-    const workoutTypes = workoutSettings.workout_types || {};
-    
-    // Get latest loads and calculate progressive loads for 16 weeks
-    const baseLoads = getLatestLoads(history);
-    const weeklyLoads = calculateProgressiveLoads(baseLoads, 16);
-
-    // Generate 16 weeks of workouts
-    for (let week = 0; week < 16; week++) {
-      for (let i = 0; i < 7; i++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + (week * 7) + i);
+        strengthRatio = lastNonDeloadStrengthRatio;
+        cardioRatio = lastNonDeloadCardioRatio;
+      } else if (week > 0) {
+        // Progressive overload with ratio management
+        const strengthIncrease = Math.min(1.1, 1.4 / strengthRatio);
+        const cardioIncrease = Math.min(1.1, 1.4 / cardioRatio);
         
-        if (schedule.includes(i)) {
-          const isDeload = (week + 1) % 4 === 0; // Every 4th week is deload
-          const weeklyLoad = weeklyLoads[week];
-          
-          // Get the workout type(s) for this day
-          let dayWorkouts = workoutTypes[i];
-          
-          // Normalize dayWorkouts to always be an array
-          if (!dayWorkouts) {
-            // No workouts defined, use default
-            dayWorkouts = [{
-              type: 'Strength',
-              subtype: null
-            }];
-          } else if (!Array.isArray(dayWorkouts)) {
-            // Single workout object - convert to array
-            dayWorkouts = [{
-              type: dayWorkouts.type || 'Strength',
-              subtype: dayWorkouts.subtype || null
-            }];
-          }
-
-          // Now dayWorkouts is guaranteed to be an array
-          dayWorkouts.forEach(workout => {
-            if (workout && workout.type) { // Add extra validation
-              workouts.push({
-                date: currentDate,
-                type: workout.type,
-                subtype: workout.subtype || null,
-                duration: workoutSettings.workout_duration || 60,
-                isDeload,
-                deloadType: 'Recovery/Deload Week',
-                planned: true,
-                strength_volume: workout.type === 'Strength' ? weeklyLoad.strength : 0,
-                cardio_load: workout.type === 'Cardio' ? weeklyLoad.cardio : 0
-              });
-            }
-          });
-        }
+        currentStrength = Math.round(currentStrength * strengthIncrease);
+        currentCardio = Math.round(currentCardio * cardioIncrease);
+        
+        // Update ratios (capped at 1.4)
+        strengthRatio = Math.min(1.4, strengthRatio * strengthIncrease);
+        cardioRatio = Math.min(1.4, cardioRatio * cardioIncrease);
       }
+
+      // Store non-deload values
+      lastNonDeloadStrength = currentStrength;
+      lastNonDeloadCardio = currentCardio;
+      lastNonDeloadStrengthRatio = strengthRatio;
+      lastNonDeloadCardioRatio = cardioRatio;
     }
 
-    return workouts;
-  };
+    loads.push({
+      strength: currentStrength,
+      cardio: currentCardio,
+      strengthRatio,
+      cardioRatio,
+      isDeload: isDeloadWeek
+    });
+  }
+
+  return loads;
+};
+
+// Update getScheduledWorkouts to use the new load calculation
+const getScheduledWorkouts = () => {
+  const workouts = [];
+  if (!workoutSettings || !planStartDate) return [];
+
+  const startDate = new Date(planStartDate);
+  const previousWeekDate = new Date(startDate);
+  previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+  
+  const schedule = workoutSettings.schedule || [];
+  const workoutTypes = workoutSettings.workout_types || {};
+  
+  // Get latest loads and calculate progressive loads for 16 weeks
+  const baseLoads = getLatestLoads(history, previousWeekDate);
+  const weeklyLoads = calculateProgressiveLoads(baseLoads, 16);
+
+  // Generate 16 weeks of workouts
+  for (let week = 0; week < 16; week++) {
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + (week * 7) + i);
+      
+      if (schedule.includes(i)) {
+        const isDeload = (week + 1) % 4 === 0; // Every 4th week is deload
+        const weeklyLoad = weeklyLoads[week];
+        
+        // Get the workout type(s) for this day
+        let dayWorkouts = workoutTypes[i];
+        
+        // Normalize dayWorkouts to always be an array
+        if (!dayWorkouts) {
+          // No workouts defined, use default
+          dayWorkouts = [{
+            type: 'Strength',
+            subtype: null
+          }];
+        } else if (!Array.isArray(dayWorkouts)) {
+          // Single workout object - convert to array
+          dayWorkouts = [{
+            type: dayWorkouts.type || 'Strength',
+            subtype: dayWorkouts.subtype || null
+          }];
+        }
+
+        // Now dayWorkouts is guaranteed to be an array
+        dayWorkouts.forEach(workout => {
+          if (workout && workout.type) { // Add extra validation
+            workouts.push({
+              date: currentDate,
+              type: workout.type,
+              subtype: workout.subtype || null,
+              duration: workoutSettings.workout_duration || 60,
+              isDeload,
+              deloadType: 'Recovery/Deload Week',
+              planned: true,
+              strength_volume: workout.type === 'Strength' ? weeklyLoad.strength : 0,
+              cardio_load: workout.type === 'Cardio' ? weeklyLoad.cardio : 0
+            });
+          }
+        });
+      }
+    }
+  }
+
+  return workouts;
+};
 
   const cycleWorkoutType = (current, subtype) => {
     if (!current) return { type: 'Strength', subtype: null };
