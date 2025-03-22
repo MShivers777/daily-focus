@@ -810,10 +810,7 @@ const getScheduledWorkouts = () => {
                       const workouts = editingSchedule
                         ? (tempWorkoutTypes[index] || [])
                         : getWorkoutsForDay(index, workoutSettings);
-                        
-                      // Debug log
-                      console.log(`Rendering day ${index}:`, workouts);
-                      
+
                       const isWorkoutDay = editingSchedule
                         ? tempWorkoutTypes[index]?.length > 0
                         : workoutSettings?.schedule?.includes(index);
@@ -831,49 +828,26 @@ const getScheduledWorkouts = () => {
                           }}
                         >
                           <div className="text-sm font-medium">{day.slice(0, 3)}</div>
-                          <div className={`text-xs px-2 py-1 rounded ${
-                            workouts.length > 0
-                              ? workouts[0]?.type === 'Strength'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                                : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
-                              : 'text-gray-400'
+                          <div className={`space-y-1 ${
+                            isWorkoutDay ? '' : 'text-gray-400'
                           }`}>
-                            {isWorkoutDay ? (
-                              <div className="truncate max-w-full">
-                                {workouts.length === 0
-                                  ? 'Rest'
-                                  : workouts.length === 1
-                                    ? getWorkoutTypeLabel(
-                                        workouts[0]?.type || '',
-                                        workouts[0]?.subtype || ''
-                                      )
-                                    : `${workouts.length} workouts`}
-                              </div>
+                            {workouts.length === 0 ? (
+                              <div className="text-xs">Rest</div>
                             ) : (
-                              'Rest'
+                              workouts.map((workout, i) => (
+                                <div
+                                  key={i}
+                                  className={`text-xs px-2 py-1 rounded break-words ${
+                                    workout.type === 'Strength'
+                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                      : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                                  }`}
+                                >
+                                  {getWorkoutTypeLabel(workout.type, workout.subtype || '')}
+                                </div>
+                              ))
                             )}
                           </div>
-                          
-                          {/* Show badges for multiple workouts */}
-                          {workouts.length > 1 && (
-                            <div className="flex justify-center gap-1 mt-1">
-                              {workouts.slice(0, 3).map((workout, i) => (
-                                <span 
-                                  key={i} 
-                                  className={`w-2 h-2 rounded-full ${
-                                    workout.type === 'Strength' 
-                                      ? 'bg-blue-500' 
-                                      : 'bg-orange-500'
-                                  }`}
-                                />
-                              ))}
-                              {workouts.length > 3 && (
-                                <span className="text-xs text-gray-500">
-                                  +{workouts.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
                         </div>
                       );
                     })}

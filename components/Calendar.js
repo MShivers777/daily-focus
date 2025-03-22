@@ -183,7 +183,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
                 }
               }}
               className={`
-                relative h-24 p-2 border border-gray-700 rounded-md 
+                relative h-32 p-2 border border-gray-700 rounded-md 
                 ${!day.isCurrentMonth ? 'bg-gray-800 opacity-50' : 'bg-gray-900'}
                 ${isSelected ? 'ring-2 ring-blue-500' : ''}
                 ${day.isToday ? 'border-blue-500' : ''}
@@ -199,8 +199,8 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
 
               {/* Multiple workout indicators */}
               {dayWorkouts.length > 0 && (
-                <div className="mt-2 space-y-1 text-xs max-h-16 overflow-y-auto">
-                  {dayWorkouts.slice(0, 2).map((workout, index) => {
+                <div className="mt-2 space-y-1 text-xs max-h-24 overflow-y-auto">
+                  {dayWorkouts.map((workout, index) => {
                     const workoutType = workout.type;
                     const workoutSubtype = workout.subtype;
                     const workoutLabel = getWorkoutTypeLabel(workoutType, workoutSubtype);
@@ -208,19 +208,21 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
                     return (
                       <div 
                         key={index} 
-                        className={`flex items-center justify-between ${
-                          workoutType === 'Strength' ? 'text-blue-400' : 'text-orange-400'
+                        className={`p-1 rounded ${
+                          workoutType === 'Strength' ? 'bg-blue-900/40 text-blue-200' : 'bg-orange-900/40 text-orange-200'
                         }`}
                       >
-                        <div className="truncate">{workoutLabel}</div>
+                        <div className="text-xs font-medium break-words">
+                          {workoutLabel}
+                        </div>
                         <div className="flex gap-1 text-xs">
                           {workout.strength_volume > 0 && (
-                            <span className="text-green-500">
+                            <span className="text-green-400">
                               {workout.strength_volume}
                             </span>
                           )}
                           {workout.cardio_load > 0 && (
-                            <span className="text-red-500">
+                            <span className="text-red-400">
                               {workout.cardio_load}
                             </span>
                           )}
@@ -228,13 +230,6 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
                       </div>
                     );
                   })}
-                  
-                  {/* Show indicator for additional workouts */}
-                  {dayWorkouts.length > 2 && (
-                    <div className="text-xs text-gray-400">
-                      +{dayWorkouts.length - 2} more
-                    </div>
-                  )}
                 </div>
               )}
             </div>
