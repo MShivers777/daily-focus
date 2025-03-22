@@ -20,6 +20,38 @@ import WorkoutDetailsModal from './WorkoutDetailsModal'; // Import the modal com
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+const STRENGTH_WORKOUT_TYPES = [
+  { id: 'full_body', label: 'Full Body' },
+  { id: 'upper_body', label: 'Upper Body' },
+  { id: 'lower_body', label: 'Lower Body' },
+  { id: 'push', label: 'Push' },
+  { id: 'pull', label: 'Pull' },
+  { id: 'legs', label: 'Legs' },
+  { id: 'squats', label: 'Squats' },
+  { id: 'deadlifts', label: 'Deadlifts' },
+  { id: 'bench', label: 'Bench Press' },
+  { id: 'olympic', label: 'Olympic Lifts' },
+  { id: 'workout_a', label: 'Workout A' },
+  { id: 'workout_b', label: 'Workout B' },
+  { id: 'workout_c', label: 'Workout C' }
+];
+
+const CARDIO_WORKOUT_TYPES = [
+  { id: 'zone2', label: 'Zone 2' },
+  { id: 'intervals', label: 'Intervals' },
+  { id: 'hiit', label: 'HIIT' },
+  { id: 'sprints', label: 'Sprints' },
+  { id: 'hill_sprints', label: 'Hill Sprints' },
+  { id: 'steady_state', label: 'Steady State' },
+  { id: 'tempo', label: 'Tempo Run' },
+  { id: 'long_run', label: 'Long Run' },  // Add this line
+  { id: 'cycling', label: 'Cycling' },
+  { id: 'swimming', label: 'Swimming' },
+  { id: 'rowing', label: 'Rowing' },
+  { id: 'cardio_a', label: 'Cardio A' },
+  { id: 'cardio_b', label: 'Cardio B' }
+];
+
 export default function WorkoutTracker() {
   const router = useRouter();
   const [workoutDate, setWorkoutDate] = useState(() => {
@@ -67,6 +99,8 @@ export default function WorkoutTracker() {
   const [scheduledWorkouts, setScheduledWorkouts] = useState([]);
   const [selectedWorkoutsForModal, setSelectedWorkoutsForModal] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [workoutType, setWorkoutType] = useState('Strength');
+  const [workoutSubtype, setWorkoutSubtype] = useState('');
 
   useEffect(() => {
     fetchHistory();
@@ -169,7 +203,8 @@ export default function WorkoutTracker() {
         cardio_load: parseInt(cardioLoad) || 0,
         note: note,
         user_id: session.user.id,
-        workout_type: getWorkoutTypeForDate(workoutDate),
+        workout_type: workoutType,
+        workout_subtype: workoutSubtype || null,
         planned: false  // Ensure completed workouts are not marked as planned
       };
       const { data: existingData, error: checkError } = await supabase
@@ -668,6 +703,39 @@ const getScheduledWorkouts = () => {
                   onChange={(e) => setWorkoutDate(e.target.value)} 
                   className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
                 />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Workout Type
+                  </label>
+                  <select
+                    value={workoutType}
+                    onChange={(e) => setWorkoutType(e.target.value)}
+                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="Strength">Strength</option>
+                    <option value="Cardio">Cardio</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Workout Subtype
+                  </label>
+                  <select
+                    value={workoutSubtype}
+                    onChange={(e) => setWorkoutSubtype(e.target.value)}
+                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">General</option>
+                    {(workoutType === 'Strength'
+                      ? STRENGTH_WORKOUT_TYPES
+                      : CARDIO_WORKOUT_TYPES
+                    ).map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <input 
                   type="text" 
                   inputMode="numeric"
@@ -676,6 +744,7 @@ const getScheduledWorkouts = () => {
                   value={strengthVolume} 
                   onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
                   className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                  disabled={workoutType !== 'Strength'}
                 />
                 <input 
                   type="text" 
@@ -685,6 +754,7 @@ const getScheduledWorkouts = () => {
                   value={cardioLoad} 
                   onChange={(e) => handleNumberInput(e, setCardioLoad)} 
                   className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                  disabled={workoutType !== 'Cardio'}
                 />
                 <textarea 
                   placeholder="Workout Notes" 
@@ -758,19 +828,6 @@ const getScheduledWorkouts = () => {
 
             {workoutSettings ? (
               <div className="space-y-6">
-                {/* Plan Start Date Selection */}
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Plan Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={planStartDate}
-                    onChange={(e) => setPlanStartDate(e.target.value)}
-                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
 
                 {/* Schedule Editor */}
                 <div className="space-y-6">
