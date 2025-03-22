@@ -319,53 +319,48 @@ export default function WorkoutTracker() {
     return BASE_WORKOUT_SCHEDULE[experienceLevel][daysPerWeek]?.pattern;
   };
 
-  const handleScheduleUpdate = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+const handleScheduleUpdate = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
-      // Get days that have workouts assigned
-      const schedule = Object.entries(tempWorkoutTypes)
-        .filter(([_, workouts]) => workouts && Array.isArray(workouts) && workouts.length > 0)
-        .map(([index]) => parseInt(index));
+    // Convert tempWorkoutTypes to array format
+    const workout_types = Object.entries(tempWorkoutTypes)
+      .filter(([_, workouts]) => workouts && Array.isArray(workouts) && workouts.length > 0)
+      .map(([dayIndex, workouts]) => ({
+        day_index: parseInt(dayIndex),
+        workouts: workouts
+      }));
 
-      // Create workout_types object with the custom pattern
-      const workout_types = {};
-      
-      Object.entries(tempWorkoutTypes)
-        .filter(([_, workouts]) => workouts && Array.isArray(workouts) && workouts.length > 0)
-        .forEach(([dayIndex, workouts]) => {
-          workout_types[dayIndex] = workouts;
-        });
+    const schedule = workout_types.map(wt => wt.day_index);
 
-      const updatedSettings = {
-        ...workoutSettings,
-        schedule,
-        workout_types,
-        workouts_per_week: schedule.length,
-        updated_at: new Date().toISOString()
-      };
+    const updatedSettings = {
+      ...workoutSettings,
+      schedule,
+      workout_types,
+      workouts_per_week: schedule.length,
+      updated_at: new Date().toISOString()
+    };
 
-      const { error } = await supabase
-        .from('user_workout_settings')
-        .upsert(updatedSettings);
+    const { error } = await supabase
+      .from('user_workout_settings')
+      .upsert(updatedSettings);
 
-      if (error) throw error;
-      
-      // Update local state
-      setWorkoutSettings(updatedSettings);
-      setEditingSchedule(false);
-      setTempWorkoutTypes({});
-      
-      // Force refresh of scheduled workouts by updating plan start date
-      setPlanStartDate(new Date().toISOString().split('T')[0]);
-      
-      toast.success('Schedule updated successfully');
-    } catch (error) {
-      console.error('Error updating schedule:', error);
-      toast.error('Failed to update schedule');
-    }
-  };
+    if (error) throw error;
+    
+    setWorkoutSettings(updatedSettings);
+    setEditingSchedule(false);
+    setTempWorkoutTypes({});
+    
+    // Force refresh of scheduled workouts by updating plan start date
+    setPlanStartDate(new Date().toISOString().split('T')[0]);
+    
+    toast.success('Schedule updated successfully');
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+    toast.error('Failed to update schedule');
+  }
+};
 
 const getLatestLoads = (history, previousWeekDate) => {
   // Find the most recent workout from the previous week
@@ -585,6 +580,13 @@ const getScheduledWorkouts = () => {
     setSelectedWorkoutsForModal([]);
   };
 
+  // Helper function to get workouts for a specific day
+  const getWorkoutsForDay = (dayIndex, settings) => {
+    if (!settings?.workout_types) return [];
+    const daySchedule = settings.workout_types.find(wt => wt.day_index === dayIndex);
+    return daySchedule?.workouts || [];
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column */}
@@ -611,9 +613,20 @@ const getScheduledWorkouts = () => {
           >
             Make Workout Plan
           </button>
+          <button
+            onClick={() => setActiveTab('zones')}
+            className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'zones'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Workout Zones
+          </button>
         </div>
 
-        {activeTab === 'track' ? (
+        {/* Tab Content */}
+        {activeTab === 'track' && (
           <>
             {/* Existing Workout Form */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
@@ -698,7 +711,8 @@ const getScheduledWorkouts = () => {
               />
             </div>
           </>
-        ) : (
+        )}
+        {activeTab === 'plan' && (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Weekly Workout Plan</h2>
@@ -765,7 +779,7 @@ const getScheduledWorkouts = () => {
                     {DAYS.map((day, index) => {
                       const workouts = editingSchedule
                         ? (tempWorkoutTypes[index] || [])
-                        : (workoutSettings?.workout_types?.[index] || []);
+                        : getWorkoutsForDay(index, workoutSettings);
                         
                       const isWorkoutDay = editingSchedule
                         ? tempSchedule[index]
@@ -959,6 +973,53 @@ const getScheduledWorkouts = () => {
                 </button>
               </div>
             )}
+          </div>
+        )}
+        {activeTab === 'zones' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+              Training Zones
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { title: 'Intervals', description: 'High-intensity intervals with recovery periods' },
+                { title: 'Tempo', description: 'Sustained effort at threshold pace' },
+                { title: 'Steady State', description: 'Moderate intensity continuous effort' },
+                { title: 'Zone 2', description: 'Easy aerobic training' },
+                { title: 'Sprints', description: 'Maximum effort short intervals' },
+                { title: 'Hill Sprints', description: 'High-intensity uphill efforts' }
+              ].map((zone, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-gray-900 text-white rounded-lg shadow-md"
+                >
+                  <h3 className="text-lg font-semibold mb-2">{zone.title}</h3>
+                  <p className="text-sm text-gray-400">{zone.description}</p>
+                  <div className="mt-4 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Pace Range"
+                      className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Heart Rate Zone"
+                      className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Typical Duration"
+                      className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                Edit Zones
+              </button>
+            </div>
           </div>
         )}
       </div>

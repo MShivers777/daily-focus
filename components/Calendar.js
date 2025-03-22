@@ -201,11 +201,9 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
               {dayWorkouts.length > 0 && (
                 <div className="mt-2 space-y-1 text-xs max-h-16 overflow-y-auto">
                   {dayWorkouts.slice(0, 2).map((workout, index) => {
-                    // If workout.type is an object, extract type and subtype.
-                    const workoutType = typeof workout.type === 'object' ? workout.type.type : workout.type;
-                    const workoutSubtype = typeof workout.type === 'object' ? workout.type.subtype : workout.subtype;
-                    // Use getWorkoutTypeLabel to get a proper string
-                    const workoutLabel = workoutSubtype ? getWorkoutTypeLabel(workoutType, workoutSubtype) : (workoutType || 'Workout');
+                    const workoutType = workout.type;
+                    const workoutSubtype = workout.subtype;
+                    const workoutLabel = getWorkoutTypeLabel(workoutType, workoutSubtype);
 
                     return (
                       <div 
