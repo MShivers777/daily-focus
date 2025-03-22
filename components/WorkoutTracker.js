@@ -818,7 +818,7 @@ const getScheduledWorkouts = () => {
                       return (
                         <div
                           key={day}
-                          className={`space-y-2 text-center ${
+                          className={`min-h-[120px] space-y-2 text-center ${
                             editingSchedule ? 'cursor-pointer' : ''
                           }`}
                           onClick={() => {
@@ -832,20 +832,24 @@ const getScheduledWorkouts = () => {
                             isWorkoutDay ? '' : 'text-gray-400'
                           }`}>
                             {workouts.length === 0 ? (
-                              <div className="text-xs">Rest</div>
+                              <div className="text-xs px-2 py-1">Rest</div>
                             ) : (
-                              workouts.map((workout, i) => (
-                                <div
-                                  key={i}
-                                  className={`text-xs px-2 py-1 rounded break-words ${
-                                    workout.type === 'Strength'
-                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                                      : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
-                                  }`}
-                                >
-                                  {getWorkoutTypeLabel(workout.type, workout.subtype || '')}
-                                </div>
-                              ))
+                              <div className="space-y-1">
+                                {workouts.map((workout, i) => (
+                                  <div
+                                    key={i}
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      workout.type === 'Strength'
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                        : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                                    }`}
+                                  >
+                                    <div className="break-words whitespace-normal">
+                                      {getWorkoutTypeLabel(workout.type, workout.subtype)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -1079,11 +1083,8 @@ const getScheduledWorkouts = () => {
             <div className="grid grid-cols-7 gap-2 text-center mb-4">
               {DAYS.map((day, index) => {
                 const isWorkoutDay = workoutSettings.schedule?.includes(index);
-                const pattern = getWorkoutPattern(workoutSettings);
-                const workoutType = isWorkoutDay && pattern 
-                  ? pattern[workoutSettings.schedule.indexOf(index) % pattern.length]
-                  : null;
-
+                const dayWorkouts = getWorkoutsForDay(index, workoutSettings);
+                
                 return (
                   <div key={day} className="space-y-1">
                     <div className={`p-2 rounded-lg text-sm ${
@@ -1093,13 +1094,19 @@ const getScheduledWorkouts = () => {
                     }`}>
                       {day.slice(0, 3)}
                     </div>
-                    {workoutType && (
-                      <div className={`text-xs px-2 py-1 rounded ${
-                        workoutType === 'Strength'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
-                      }`}>
-                        {workoutType}
+                    {dayWorkouts && dayWorkouts.length > 0 && (
+                      <div className="space-y-1">
+                        {dayWorkouts.map((workoutItem, i) => (
+                          <div 
+                            key={i}
+                            className={`text-xs px-2 py-1 rounded ${
+                              workoutItem.type === 'Strength'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+                            }`}>
+                            {workoutItem.type}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

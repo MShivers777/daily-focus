@@ -119,9 +119,39 @@ export function getWorkoutTypeLabel(type, subtype) {
   return type;
 }
 
-export function getWorkoutPattern(experienceLevel, daysPerWeek) {
-  return BASE_WORKOUT_SCHEDULE[experienceLevel]?.[daysPerWeek]?.pattern || 
-    BASE_WORKOUT_SCHEDULE.beginner[3].pattern;
+export function getWorkoutPattern(workoutSettings) {
+  if (!workoutSettings) return null;
+  
+  // First check for custom workout types
+  if (workoutSettings.workout_types) {
+    if (Array.isArray(workoutSettings.workout_types)) {
+      // Handle array-based workout_types
+      const pattern = workoutSettings.workout_types
+        .filter(Boolean) // Filter out null entries
+        .map(dayWorkouts => 
+          Array.isArray(dayWorkouts) && dayWorkouts.length > 0 
+            ? dayWorkouts[0].type // Just use the first workout's type for pattern
+            : null
+        )
+        .filter(Boolean);
+      if (pattern.length > 0) return pattern;
+    } else {
+      // Handle object-based workout_types (legacy format)
+      const pattern = Object.entries(workoutSettings.workout_types)
+        .sort(([a], [b]) => parseInt(a) - parseInt(b))
+        .map(([_, type]) => type?.type || type);
+      if (pattern.length > 0) return pattern;
+    }
+  }
+
+  // Fall back to default patterns if no custom pattern exists
+  const experienceLevel = workoutSettings.training_experience >= 3 
+    ? 'advanced' 
+    : workoutSettings.training_experience >= 1 
+      ? 'intermediate' 
+      : 'beginner';
+  const daysPerWeek = workoutSettings.schedule.length;
+  return BASE_WORKOUT_SCHEDULE[experienceLevel][daysPerWeek]?.pattern;
 }
 
 export async function fetchUserWorkoutSettings(supabase, userId) {
