@@ -135,9 +135,26 @@ export async function fetchUserWorkoutSettings(supabase, userId) {
       .maybeSingle();
 
     if (error) throw error;
+    
+    // Debug log
+    console.log('Fetched workout settings:', data);
+    if (data?.workout_types) {
+      console.log('Workout types structure:', JSON.stringify(data.workout_types, null, 2));
+    }
+    
+    // Ensure workout_types is always an array
+    if (data && !Array.isArray(data.workout_types)) {
+      data.workout_types = [];
+    }
+
     return data;
   } catch (error) {
     console.error('Error fetching workout settings:', error);
     return null;
   }
+}
+
+export function getWorkoutsForDay(dayIndex, settings) {
+  if (!settings?.workout_types?.[dayIndex]) return [];
+  return settings.workout_types[dayIndex] || [];
 }

@@ -324,15 +324,29 @@ const handleScheduleUpdate = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Convert tempWorkoutTypes to array format
-    const workout_types = Object.entries(tempWorkoutTypes)
-      .filter(([_, workouts]) => workouts && Array.isArray(workouts) && workouts.length > 0)
-      .map(([dayIndex, workouts]) => ({
-        day_index: parseInt(dayIndex),
-        workouts: workouts
-      }));
+    // Debug log
+    console.log('Current tempWorkoutTypes:', tempWorkoutTypes);
 
-    const schedule = workout_types.map(wt => wt.day_index);
+    // Convert workouts to array format and add debug logging
+    const workout_types = [];
+    DAYS.forEach((_, dayIndex) => {
+      const workouts = tempWorkoutTypes[dayIndex];
+      if (workouts && Array.isArray(workouts) && workouts.length > 0) {
+        // Debug log
+        console.log(`Processing day ${dayIndex}:`, workouts);
+        workout_types[dayIndex] = workouts.map(w => ({
+          type: w.type,
+          subtype: w.subtype
+        }));
+      }
+    });
+
+    // Debug log
+    console.log('Processed workout_types:', workout_types);
+
+    const schedule = Object.keys(tempWorkoutTypes)
+      .filter(dayIndex => tempWorkoutTypes[dayIndex]?.length > 0)
+      .map(dayIndex => parseInt(dayIndex));
 
     const updatedSettings = {
       ...workoutSettings,
@@ -341,6 +355,9 @@ const handleScheduleUpdate = async () => {
       workouts_per_week: schedule.length,
       updated_at: new Date().toISOString()
     };
+
+    // Debug log
+    console.log('Saving settings:', updatedSettings);
 
     const { error } = await supabase
       .from('user_workout_settings')
@@ -582,9 +599,22 @@ const getScheduledWorkouts = () => {
 
   // Helper function to get workouts for a specific day
   const getWorkoutsForDay = (dayIndex, settings) => {
-    if (!settings?.workout_types) return [];
-    const daySchedule = settings.workout_types.find(wt => wt.day_index === dayIndex);
-    return daySchedule?.workouts || [];
+    try {
+      if (!settings?.workout_types) return [];
+      
+      // Debug log
+      console.log(`Getting workouts for day ${dayIndex}:`, settings.workout_types[dayIndex]);
+      
+      const dayWorkouts = settings.workout_types[dayIndex];
+      if (!dayWorkouts) return [];
+      
+      // Ensure we're returning an array
+      return Array.isArray(dayWorkouts) ? dayWorkouts : [];
+      
+    } catch (error) {
+      console.error(`Error getting workouts for day ${dayIndex}:`, error);
+      return [];
+    }
   };
 
   return (
@@ -781,8 +811,11 @@ const getScheduledWorkouts = () => {
                         ? (tempWorkoutTypes[index] || [])
                         : getWorkoutsForDay(index, workoutSettings);
                         
+                      // Debug log
+                      console.log(`Rendering day ${index}:`, workouts);
+                      
                       const isWorkoutDay = editingSchedule
-                        ? tempSchedule[index]
+                        ? tempWorkoutTypes[index]?.length > 0
                         : workoutSettings?.schedule?.includes(index);
 
                       return (
