@@ -11,82 +11,74 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
   useEffect(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
+
     // Get the first day of the month
-    const firstDay = new Date(year, month, 1);
-    const startingDayOfWeek = firstDay.getDay();
-    
+    const firstDay = new Date(Date.UTC(year, month, 1));
+    const startingDayOfWeek = firstDay.getUTCDay();
+
     // Get the last day of the month
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    
+    const lastDay = new Date(Date.UTC(year, month + 1, 0));
+    const daysInMonth = lastDay.getUTCDate();
+
     // Create array for all calendar days (including padding)
     const days = [];
-    
+
     // Add padding days from previous month
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    const prevMonthLastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       days.push({
-        date: new Date(year, month - 1, prevMonthLastDay - i),
+        date: new Date(Date.UTC(year, month - 1, prevMonthLastDay - i)),
         isCurrentMonth: false,
         isToday: false
       });
     }
-    
+
     // Add days from current month
     const today = new Date();
     for (let i = 1; i <= daysInMonth; i++) {
-      const date = new Date(year, month, i);
+      const date = new Date(Date.UTC(year, month, i));
       days.push({
         date,
         isCurrentMonth: true,
-        isToday: 
-          date.getDate() === today.getDate() && 
-          date.getMonth() === today.getMonth() && 
-          date.getFullYear() === today.getFullYear()
+        isToday:
+          date.getUTCDate() === today.getUTCDate() &&
+          date.getUTCMonth() === today.getUTCMonth() &&
+          date.getUTCFullYear() === today.getUTCFullYear()
       });
     }
-    
+
     // Add padding days from next month
     const daysNeeded = 42 - days.length; // 6 rows of 7 days
     for (let i = 1; i <= daysNeeded; i++) {
       days.push({
-        date: new Date(year, month + 1, i),
+        date: new Date(Date.UTC(year, month + 1, i)),
         isCurrentMonth: false,
         isToday: false
       });
     }
-    
+
     setCalendarDays(days);
   }, [currentMonth]);
 
-  // Get workouts for a specific day - updated to return an array
+  // Get workouts for a specific day - updated to compare dates in UTC
   const getWorkoutsForDay = (date) => {
     if (!workouts || !Array.isArray(workouts) || workouts.length === 0) return [];
-    
-    // Format the date as YYYY-MM-DD for comparison
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+
+    // Format the date as YYYY-MM-DD in UTC for comparison
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
-    
+
     return workouts.filter(workout => {
-      // Handle both date objects and string dates in workout data
       if (!workout) return false;
-      
-      const workoutDate = workout.date instanceof Date 
-        ? workout.date
-        : new Date(workout.date);
-      
-      // Guard against invalid dates
-      if (isNaN(workoutDate.getTime())) return false;
-      
-      // Format workout date the same way for comparison
-      const workoutYear = workoutDate.getFullYear();
-      const workoutMonth = String(workoutDate.getMonth() + 1).padStart(2, '0');
-      const workoutDay = String(workoutDate.getDate()).padStart(2, '0');
+
+      const workoutDate = new Date(workout.date); // Assume workout.date is in ISO format
+      const workoutYear = workoutDate.getUTCFullYear();
+      const workoutMonth = String(workoutDate.getUTCMonth() + 1).padStart(2, '0');
+      const workoutDay = String(workoutDate.getUTCDate()).padStart(2, '0');
       const workoutDateString = `${workoutYear}-${workoutMonth}-${workoutDay}`;
-      
+
       return workoutDateString === dateString;
     });
   };
@@ -94,18 +86,18 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
   // Navigate to previous month
   const prevMonth = () => {
     setCurrentMonth(prevState => {
-      const year = prevState.getFullYear();
-      const month = prevState.getMonth();
-      return new Date(year, month - 1, 1);
+      const year = prevState.getUTCFullYear();
+      const month = prevState.getUTCMonth();
+      return new Date(Date.UTC(year, month - 1, 1));
     });
   };
 
   // Navigate to next month
   const nextMonth = () => {
     setCurrentMonth(prevState => {
-      const year = prevState.getFullYear();
-      const month = prevState.getMonth();
-      return new Date(year, month + 1, 1);
+      const year = prevState.getUTCFullYear();
+      const month = prevState.getUTCMonth();
+      return new Date(Date.UTC(year, month + 1, 1));
     });
   };
 
@@ -127,13 +119,13 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
           {formatMonthYear(currentMonth)}
         </h3>
         <div className="flex space-x-2">
-          <button 
+          <button
             onClick={goToToday}
             className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Today
           </button>
-          <button 
+          <button
             onClick={prevMonth}
             className="p-1 rounded-full hover:bg-gray-700"
           >
@@ -141,7 +133,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <button 
+          <button
             onClick={nextMonth}
             className="p-1 rounded-full hover:bg-gray-700"
           >
@@ -165,13 +157,13 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
       <div className="grid grid-cols-7 gap-1">
         {calendarDays.map((day, idx) => {
           const dayWorkouts = getWorkoutsForDay(day.date);
-          
+
           // Safe selected date comparison
-          const isSelected = selectedDate && day.date && 
-            day.date.getFullYear() === selectedDate.getFullYear() &&
-            day.date.getMonth() === selectedDate.getMonth() &&
-            day.date.getDate() === selectedDate.getDate();
-          
+          const isSelected = selectedDate && day.date &&
+            day.date.getUTCFullYear() === selectedDate.getUTCFullYear() &&
+            day.date.getUTCMonth() === selectedDate.getUTCMonth() &&
+            day.date.getUTCDate() === selectedDate.getUTCDate();
+
           return (
             <div
               key={idx}
@@ -194,7 +186,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
                 text-xs font-medium 
                 ${day.isToday ? 'text-blue-400' : 'text-gray-400'}
               `}>
-                {day.date.getDate()}
+                {day.date.getUTCDate()}
               </div>
 
               {/* Multiple workout indicators */}
@@ -206,8 +198,8 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
                     const workoutLabel = getWorkoutTypeLabel(workoutType, workoutSubtype);
 
                     return (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className={`p-1 rounded ${
                           workoutType === 'Strength' ? 'bg-blue-900/40 text-blue-200' : 'bg-orange-900/40 text-orange-200'
                         }`}

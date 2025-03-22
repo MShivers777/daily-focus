@@ -76,19 +76,20 @@ export default function WorkoutOnboarding() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session found');
 
-      // Ensure all required fields have values
       const workoutSettings = {
         user_id: session.user.id,
         goals: formData.goals,
-        training_experience: formData.trainingExperience || 0, // Ensure we have a number
+        training_experience: formData.trainingExperience || 0,
         workout_duration: formData.workoutDuration,
         workouts_per_week: formData.schedule.filter(day => day !== null).length,
         deload_frequency: formData.deloadFrequency,
         schedule: formData.schedule.map((day, index) => day !== null ? index : null).filter(day => day !== null),
+        workout_types: formData.workoutTypes || Array(7).fill([]),
         heart_rates: formData.heartRates || {},
         baselines: formData.baselines || [],
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        plan_start_date: formData.planStartDate || new Date().toISOString().split('T')[0]
       };
 
       const { error } = await supabase

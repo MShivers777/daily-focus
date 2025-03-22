@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast'; // Add this import
+import toast from 'react-hot-toast';
 import supabase from '../api/supabase';
 import LoadRatiosGraph from './LoadRatiosGraph';
 import LoadRatioDisplay from './LoadRatioDisplay';
@@ -15,7 +15,7 @@ import { calculateLoads, previewWorkoutLoads, validateLoads } from '../utils/loa
 import ExpandedGraphModal from './ExpandedGraphModal';
 import { BASE_WORKOUT_SCHEDULE, fetchUserWorkoutSettings, getWorkoutTypeLabel } from '../utils/workoutSchedules';
 import Calendar from './Calendar';
-import WorkoutTypeSelector from './WorkoutTypeSelector';
+import WorkoutTypeSelector from './workout-onboarding/WorkoutTypeSelector';
 import WorkoutDetailsModal from './WorkoutDetailsModal'; // Import the modal component
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

@@ -1,0 +1,3 @@
+'use client';
+
+// ... existing WorkoutTypeSelector code without changes ...
