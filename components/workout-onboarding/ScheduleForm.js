@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import WorkoutTypeSelector from './WorkoutTypeSelector';
+import WorkoutTypeSelector from './WorkoutTypeSelector'; // Ensure this is the correct import
 
 const DAYS = [
   { id: 'sunday', label: 'Sun' },
@@ -22,16 +22,16 @@ const DURATION_OPTIONS = [
 ];
 
 export default function ScheduleForm({ schedule, workoutDuration, onChange, onNext, onBack }) {
-  const [selectedDays, setSelectedDays] = useState(schedule.filter(day => day !== null).length);
-  const [workoutTypes, setWorkoutTypes] = useState(Array(7).fill([]));
+  const [workoutTypes, setWorkoutTypes] = useState(() => {
+    // Initialize with empty arrays for each day
+    return Array(7).fill().map(() => []);
+  });
   const [editingDay, setEditingDay] = useState(null);
 
   const handleDayClick = (dayIndex) => {
-    if (editingDay === dayIndex) {
-      setEditingDay(null);
-    } else {
-      setEditingDay(dayIndex);
-    }
+    const newSchedule = [...schedule];
+    newSchedule[dayIndex] = newSchedule[dayIndex] === null ? dayIndex : null; // Toggle day selection
+    onChange({ schedule: newSchedule }); // Update parent state
   };
 
   const handleWorkoutTypeSelect = (dayIndex, selectedWorkouts) => {
@@ -41,18 +41,18 @@ export default function ScheduleForm({ schedule, workoutDuration, onChange, onNe
 
     const newSchedule = [...schedule];
     newSchedule[dayIndex] = selectedWorkouts.length > 0 ? dayIndex : null;
-    onChange({ schedule: newSchedule, workoutTypes: newWorkoutTypes });
-  };
-
-  const handleDayToggle = (dayIndex) => {
-    const newSchedule = [...schedule];
-    newSchedule[dayIndex] = newSchedule[dayIndex] === null ? dayIndex : null;
-    onChange({ schedule: newSchedule });
+    
+    // Pass both schedule and workoutTypes in onChange
+    onChange({ 
+      schedule: newSchedule, 
+      workoutTypes: newWorkoutTypes,
+      workoutDuration
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (selectedDays > 0 && workoutDuration) {
+    if (schedule.filter(day => day !== null).length > 0 && workoutDuration) {
       onNext();
     }
   };
@@ -61,17 +61,17 @@ export default function ScheduleForm({ schedule, workoutDuration, onChange, onNe
     <form onSubmit={handleSubmit} className="space-y-8">
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-gray-800 dark:text-white">
-          Select Workout Days ({selectedDays} selected)
+          Select Workout Days ({schedule.filter(day => day !== null).length} selected)
         </h3>
         <div className="grid grid-cols-7 gap-2">
           {DAYS.map((day, index) => (
             <div
               key={day.id}
-              className={`min-h-[100px] p-2 rounded-lg transition-all ${
+              className={`min-h-[100px] p-2 rounded-lg transition-all cursor-pointer ${
                 schedule[index] !== null
                   ? 'bg-gray-50 dark:bg-gray-700'
                   : 'bg-gray-100 dark:bg-gray-800'
-              } ${editingDay === index ? 'ring-2 ring-blue-500' : ''}`}
+              }`}
               onClick={() => handleDayClick(index)}
             >
               <div className="text-sm font-medium mb-2">{day.label}</div>
@@ -85,7 +85,12 @@ export default function ScheduleForm({ schedule, workoutDuration, onChange, onNe
                         : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
                     }`}
                   >
-                    {getWorkoutTypeLabel(workout.type, workout.subtype)}
+                    {workout.type}
+                    {workout.subtype && (
+                      <span className="text-xs opacity-75 ml-1">
+                        : {workout.subtype.replace(/_/g, ' ')}
+                      </span>
+                    )}
                   </div>
                 ))}
                 {workoutTypes[index]?.length === 0 && (
@@ -137,7 +142,7 @@ export default function ScheduleForm({ schedule, workoutDuration, onChange, onNe
         </button>
         <button
           type="submit"
-          disabled={selectedDays === 0 || !workoutDuration}
+          disabled={schedule.filter(day => day !== null).length === 0 || !workoutDuration}
           className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next

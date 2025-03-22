@@ -91,11 +91,12 @@ export const CARDIO_WORKOUT_TYPES = [
   { id: 'zone2', label: 'Zone 2' },
   { id: 'intervals', label: 'Intervals' },
   { id: 'hiit', label: 'HIIT' },
+  { id: 'vo2max', label: 'VO2max' }, // Add this line
   { id: 'sprints', label: 'Sprints' },
   { id: 'hill_sprints', label: 'Hill Sprints' },
   { id: 'steady_state', label: 'Steady State' },
   { id: 'tempo', label: 'Tempo Run' },
-  { id: 'long_run', label: 'Long Run' },  // Add this line
+  { id: 'long_run', label: 'Long Run' },
   { id: 'cycling', label: 'Cycling' },
   { id: 'swimming', label: 'Swimming' },
   { id: 'rowing', label: 'Rowing' },

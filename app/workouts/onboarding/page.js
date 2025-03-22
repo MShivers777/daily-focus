@@ -7,6 +7,7 @@ import BackIcon from '../../../components/icons/BackIcon';
 import GoalsForm from '../../../components/workout-onboarding/GoalsForm';
 import ExperienceForm from '../../../components/workout-onboarding/ExperienceForm';
 import ScheduleForm from '../../../components/workout-onboarding/ScheduleForm';
+import WorkoutSelectionForm from '../../../components/workout-onboarding/WorkoutSelectionForm'; // New step
 import toast from 'react-hot-toast';
 import { default as ReviewFormComponent } from '../../../components/workout-onboarding/ReviewForm';  // Fix import
 
@@ -19,8 +20,11 @@ export default function WorkoutOnboarding() {
     workoutsPerWeek: 3,
     workoutDuration: 60,
     schedule: Array(7).fill(null),
+    workoutTypes: Array(7).fill([]),
+    selectedWorkouts: [], // New field for selected workouts
     baselines: [],
-    trainingExperience: 0
+    trainingExperience: 0,
+    planStartDate: new Date().toISOString().split('T')[0] // Default to today's date
   });
 
   useEffect(() => {
@@ -33,6 +37,8 @@ export default function WorkoutOnboarding() {
           .from('user_workout_settings')
           .select('*')
           .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false }) // Ensure the latest row is fetched
+          .limit(1) // Fetch only one row
           .single();
 
         if (error) throw error;
@@ -46,9 +52,12 @@ export default function WorkoutOnboarding() {
             schedule: Array(7).fill(null).map((_, i) => 
               data.schedule?.includes(i) ? i : null
             ),
+            workoutTypes: data.workout_types || Array(7).fill([]),
+            selectedWorkouts: data.selected_workouts || [],
             baselines: data.baselines || [],
             trainingExperience: data.training_experience || 0,
-            heartRates: data.heart_rates || {}
+            heartRates: data.heart_rates || {},
+            planStartDate: data.plan_start_date || new Date().toISOString().split('T')[0]
           });
         }
       } catch (error) {
@@ -76,21 +85,50 @@ export default function WorkoutOnboarding() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session found');
 
+      // Convert selected workouts into workout_types array
+      const workout_types = Array(7).fill([]);
+      
+      // Map selected workouts to days of the week
+      formData.selectedWorkouts.forEach(workout => {
+        const dayIndex = DAYS.findIndex(day => 
+          day.toLowerCase() === workout.day.toLowerCase()
+        );
+        if (dayIndex !== -1) {
+          workout_types[dayIndex] = [
+            {
+              type: workout.type,
+              subtype: workout.subtype,
+              frequency: workout.frequency
+            }
+          ];
+        }
+      });
+
+      const schedule = workout_types
+        .map((types, index) => types.length > 0 ? index : null)
+        .filter(day => day !== null);
+
       const workoutSettings = {
         user_id: session.user.id,
         goals: formData.goals,
         training_experience: formData.trainingExperience || 0,
         workout_duration: formData.workoutDuration,
-        workouts_per_week: formData.schedule.filter(day => day !== null).length,
+        workouts_per_week: schedule.length,
         deload_frequency: formData.deloadFrequency,
-        schedule: formData.schedule.map((day, index) => day !== null ? index : null).filter(day => day !== null),
-        workout_types: formData.workoutTypes || Array(7).fill([]),
+        schedule,
+        workout_types,
+        selected_workouts: formData.selectedWorkouts,
         heart_rates: formData.heartRates || {},
         baselines: formData.baselines || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        plan_start_date: formData.planStartDate || new Date().toISOString().split('T')[0]
+        plan_start_date: formData.planStartDate
       };
+
+      // Debug logs
+      console.log('Saving workout settings:', workoutSettings);
+      console.log('Selected workouts:', formData.selectedWorkouts);
+      console.log('Generated workout_types:', workout_types);
 
       const { error } = await supabase
         .from('user_workout_settings')
@@ -106,7 +144,7 @@ export default function WorkoutOnboarding() {
     }
   };
 
-  const steps = ['Goals', 'Experience', 'Schedule', 'Review'];
+  const steps = ['Goals', 'Experience', 'Schedule', 'Workout Selection', 'Review'];
 
   return (
     <div className="relative">
@@ -142,11 +180,24 @@ export default function WorkoutOnboarding() {
 
           {/* Form Steps */}
           {currentStep === 1 && (
-            <GoalsForm 
-              goals={formData.goals}
-              onChange={(goals) => setFormData(prev => ({ ...prev, goals }))}
-              onNext={() => setCurrentStep(2)}
-            />
+            <div className="space-y-8">
+              <GoalsForm 
+                goals={formData.goals}
+                onChange={(goals) => setFormData(prev => ({ ...prev, goals }))}
+                onNext={() => setCurrentStep(2)}
+              />
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white">
+                  Select Plan Start Date
+                </h3>
+                <input
+                  type="date"
+                  value={formData.planStartDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, planStartDate: e.target.value }))}
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+            </div>
           )}
           {currentStep === 2 && (
             <ExperienceForm
@@ -171,6 +222,14 @@ export default function WorkoutOnboarding() {
             />
           )}
           {currentStep === 4 && (
+            <WorkoutSelectionForm
+              selectedWorkouts={formData.selectedWorkouts}
+              onChange={(selectedWorkouts) => setFormData(prev => ({ ...prev, selectedWorkouts }))}
+              onNext={() => setCurrentStep(5)}
+              onBack={handleBack}
+            />
+          )}
+          {currentStep === 5 && (
             <ReviewFormComponent
               formData={formData}
               onBack={handleBack}

@@ -1,18 +1,43 @@
 'use client';
+
 import { useState } from 'react';
 import { DndContext, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { BASE_WORKOUT_SCHEDULE } from '../../utils/workoutSchedules';
+import { BASE_WORKOUT_SCHEDULE, STRENGTH_WORKOUT_TYPES, CARDIO_WORKOUT_TYPES } from '../../utils/workoutSchedules';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function generateWorkoutPlan(formData) {
+  // Use selected workouts if available, otherwise fall back to default pattern
+  if (formData.selectedWorkouts && formData.selectedWorkouts.length > 0) {
+    return Array(2).fill().map((_, weekIndex) => {
+      return DAYS.map((day, dayIndex) => {
+        // Find workouts scheduled for this day
+        const dayWorkouts = formData.selectedWorkouts.filter(
+          workout => workout.day.toLowerCase() === day.toLowerCase()
+        );
+
+        return {
+          dayIndex,
+          dayName: day,
+          isSelected: dayWorkouts.length > 0,
+          workout: dayWorkouts.length > 0 ? {
+            type: dayWorkouts[0].type,
+            subtype: dayWorkouts[0].subtype,
+            duration: formData.workoutDuration,
+            frequency: dayWorkouts[0].frequency
+          } : null
+        };
+      });
+    });
+  }
+
+  // Fall back to default pattern if no selected workouts
   const selectedDays = formData.schedule
     .map((day, index) => day !== null ? index : null)
     .filter(day => day !== null);
 
-  // Determine experience level
   let experienceLevel = 'beginner';
   if (formData.trainingExperience >= 3) {
     experienceLevel = 'advanced';
@@ -20,12 +45,10 @@ function generateWorkoutPlan(formData) {
     experienceLevel = 'intermediate';
   }
 
-  // Get workout pattern based on experience and days per week
   const daysPerWeek = selectedDays.length;
   const pattern = BASE_WORKOUT_SCHEDULE[experienceLevel][daysPerWeek]?.pattern || 
     BASE_WORKOUT_SCHEDULE.beginner[3].pattern;
 
-  // Create two weeks with fixed days and recommended workout types
   return Array(2).fill().map((_, weekIndex) => {
     const weekDays = DAYS.map((day, dayIndex) => ({
       dayIndex,
@@ -33,6 +56,7 @@ function generateWorkoutPlan(formData) {
       isSelected: selectedDays.includes(dayIndex),
       workout: selectedDays.includes(dayIndex) ? {
         type: pattern[selectedDays.indexOf(dayIndex) % pattern.length],
+        subtype: null,
         duration: formData.workoutDuration
       } : null
     }));
@@ -40,7 +64,7 @@ function generateWorkoutPlan(formData) {
   });
 }
 
-const SortableWorkout = ({ workout, dayName, id }) => {
+const SortableWorkout = ({ workout, dayName, id, onDoubleClick }) => {
   const {
     attributes,
     listeners,
@@ -63,6 +87,7 @@ const SortableWorkout = ({ workout, dayName, id }) => {
           style={style}
           {...attributes}
           {...listeners}
+          onDoubleClick={onDoubleClick}
           className={`flex-1 p-2 rounded cursor-move flex items-center justify-between ${
             workout.type === 'Strength' 
               ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
@@ -70,6 +95,11 @@ const SortableWorkout = ({ workout, dayName, id }) => {
           }`}
         >
           <span className="text-sm font-medium">{workout.type}</span>
+          {workout.subtype && (
+            <span className="text-xs opacity-75 ml-1">
+              : {workout.subtype.replace(/_/g, ' ')}
+            </span>
+          )}
           <span className="text-sm">{workout.duration} min</span>
         </div>
       )}
@@ -77,14 +107,13 @@ const SortableWorkout = ({ workout, dayName, id }) => {
   );
 };
 
-const WorkoutWeek = ({ week, weekIndex, onReorder }) => {
+const WorkoutWeek = ({ week, weekIndex, onReorder, onEditWorkout }) => {
   const sensors = useSensors(useSensor(PointerSensor));
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!active || !over || active.id === over.id) return;
 
-    // Extract day indices from the IDs
     const oldDayIndex = parseInt(active.id.split('-')[2]);
     const newDayIndex = parseInt(over.id.split('-')[2]);
     
@@ -109,6 +138,7 @@ const WorkoutWeek = ({ week, weekIndex, onReorder }) => {
                 id={`week-${weekIndex}-${day.dayIndex}`}
                 dayName={day.dayName}
                 workout={day.workout}
+                onDoubleClick={() => onEditWorkout(weekIndex, day.dayIndex)}
               />
             ))}
           </div>
@@ -122,13 +152,13 @@ export default function ReviewForm({ formData, onBack, onSubmit }) {
   const [workoutPlan, setWorkoutPlan] = useState(() => 
     generateWorkoutPlan(formData)
   );
+  const [editingWorkout, setEditingWorkout] = useState(null);
 
   const handleReorder = (weekIndex, oldDayIndex, newDayIndex) => {
     setWorkoutPlan(prev => {
       const newPlan = [...prev];
       const week = [...newPlan[weekIndex]];
       
-      // Swap workout types between days
       const oldWorkout = week[oldDayIndex].workout;
       const newWorkout = week[newDayIndex].workout;
       
@@ -140,6 +170,24 @@ export default function ReviewForm({ formData, onBack, onSubmit }) {
       newPlan[weekIndex] = week;
       return newPlan;
     });
+  };
+
+  const handleEditWorkout = (weekIndex, dayIndex) => {
+    setEditingWorkout({ weekIndex, dayIndex, ...workoutPlan[weekIndex][dayIndex].workout });
+  };
+
+  const handleSaveWorkoutEdit = () => {
+    setWorkoutPlan(prev => {
+      const newPlan = [...prev];
+      const { weekIndex, dayIndex, ...updatedWorkout } = editingWorkout;
+      newPlan[weekIndex][dayIndex].workout = updatedWorkout;
+      return newPlan;
+    });
+    setEditingWorkout(null);
+  };
+
+  const handleCancelWorkoutEdit = () => {
+    setEditingWorkout(null);
   };
 
   const selectedDays = formData.schedule.filter(day => day !== null).length;
@@ -217,7 +265,7 @@ export default function ReviewForm({ formData, onBack, onSubmit }) {
       <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
         <h4 className="font-medium mb-4">
           2-Week Sample Schedule
-          <span className="text-sm text-gray-500 ml-2">(drag to reorder)</span>
+          <span className="text-sm text-gray-500 ml-2">(Drag to reorder. Double click to change workout type.)</span>
         </h4>
         <div className="space-y-6">
           {workoutPlan.map((week, weekIndex) => (
@@ -226,10 +274,69 @@ export default function ReviewForm({ formData, onBack, onSubmit }) {
               week={week}
               weekIndex={weekIndex}
               onReorder={handleReorder}
+              onEditWorkout={handleEditWorkout}
             />
           ))}
         </div>
       </div>
+
+      {/* Edit Workout Modal */}
+      {editingWorkout && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 text-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">Edit Workout</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Workout Type
+                </label>
+                <select
+                  value={editingWorkout.type}
+                  onChange={(e) => setEditingWorkout(prev => ({ ...prev, type: e.target.value, subtype: null }))}
+                  className="w-full p-2 rounded-lg bg-gray-700 text-white"
+                >
+                  <option value="Strength">Strength</option>
+                  <option value="Cardio">Cardio</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Subtype
+                </label>
+                <select
+                  value={editingWorkout.subtype || ''}
+                  onChange={(e) => setEditingWorkout(prev => ({ ...prev, subtype: e.target.value }))}
+                  className="w-full p-2 rounded-lg bg-gray-700 text-white"
+                >
+                  <option value="">General</option>
+                  {(editingWorkout.type === 'Strength'
+                    ? STRENGTH_WORKOUT_TYPES
+                    : CARDIO_WORKOUT_TYPES
+                  ).map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2 mt-4">
+              <button
+                onClick={handleCancelWorkoutEdit}
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveWorkoutEdit}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4">
         <button

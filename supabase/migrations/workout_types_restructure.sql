@@ -9,3 +9,7 @@ ALTER TABLE user_workout_settings
 -- Add new column with correct type
 ALTER TABLE user_workout_settings
   ADD COLUMN workout_types jsonb DEFAULT '[]'::jsonb;
+
+-- Add the plan_start_date column to the user_workout_settings table
+ALTER TABLE user_workout_settings
+ADD COLUMN plan_start_date DATE DEFAULT CURRENT_DATE;

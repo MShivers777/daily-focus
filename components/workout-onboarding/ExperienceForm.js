@@ -28,6 +28,15 @@ const validateNumber = (value) => {
   return value === '' || /^\d{0,6}$/.test(value);
 };
 
+const EXPERIENCE_OPTIONS = [
+  { value: 0, label: 'Just starting out' },
+  { value: 1, label: 'Less than 6 months' },
+  { value: 2, label: '6-12 months' },
+  { value: 3, label: '1-2 years' },
+  { value: 4, label: '2-5 years' },
+  { value: 5, label: '5+ years' }
+];
+
 export default function ExperienceForm({ experience, onChange, onNext, onBack }) {
   const [restingHR, setRestingHR] = useState('');
   const [maxHR, setMaxHR] = useState('');
@@ -39,12 +48,42 @@ export default function ExperienceForm({ experience, onChange, onNext, onBack })
   const [baselines, setBaselines] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [timeInputs, setTimeInputs] = useState({ hours: '', minutes: '', seconds: '' });
+  const [selectedExperience, setSelectedExperience] = useState(experience || 0);
 
   useEffect(() => {
-    if (experience !== undefined) {
-      onChange({ trainingExperience: experience });
-    }
+    const fetchExperienceData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data, error } = await supabase
+          .from('user_workout_settings')
+          .select('training_experience, heart_rates, baselines')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          onChange({ trainingExperience: data.training_experience || 0 });
+          setRestingHR(data.heart_rates?.resting || '');
+          setMaxHR(data.heart_rates?.max || '');
+          setBaselines(data.baselines || []);
+        }
+      } catch (error) {
+        console.error('Error fetching experience data:', error);
+      }
+    };
+
+    fetchExperienceData();
   }, []);
+
+  useEffect(() => {
+    // Ensure the selected experience is updated when the prop changes
+    setSelectedExperience(experience || 0);
+  }, [experience]);
 
   const handleNumberInput = (e, setter) => {
     const value = e.target.value;
@@ -122,7 +161,7 @@ export default function ExperienceForm({ experience, onChange, onNext, onBack })
   const handleSubmit = (e) => {
     e.preventDefault();
     onChange({
-      trainingExperience: parseInt(experience) || 0, // Ensure we have a number
+      trainingExperience: selectedExperience,
       heartRates: {
         resting: parseInt(restingHR) || null,
         max: parseInt(maxHR) || null
@@ -140,16 +179,15 @@ export default function ExperienceForm({ experience, onChange, onNext, onBack })
           How long have you been working out consistently?
         </label>
         <select
-          value={experience}
-          onChange={(e) => onChange(parseInt(e.target.value))}
+          value={selectedExperience}
+          onChange={(e) => setSelectedExperience(parseInt(e.target.value))}
           className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700"
         >
-          <option value={0}>Just starting out</option>
-          <option value={1}>Less than 6 months</option>
-          <option value={2}>6-12 months</option>
-          <option value={3}>1-2 years</option>
-          <option value={4}>2-5 years</option>
-          <option value={5}>5+ years</option>
+          {EXPERIENCE_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </div>
 

@@ -363,15 +363,15 @@ const handleScheduleUpdate = async () => {
     console.log('Current tempWorkoutTypes:', tempWorkoutTypes);
 
     // Convert workouts to array format and add debug logging
-    const workout_types = [];
-    DAYS.forEach((_, dayIndex) => {
+    const workout_types = Array(7).fill([]); // Initialize with empty arrays for each day
+    Object.keys(tempWorkoutTypes).forEach((dayIndex) => {
       const workouts = tempWorkoutTypes[dayIndex];
       if (workouts && Array.isArray(workouts) && workouts.length > 0) {
         // Debug log
         console.log(`Processing day ${dayIndex}:`, workouts);
-        workout_types[dayIndex] = workouts.map(w => ({
+        workout_types[dayIndex] = workouts.map((w) => ({
           type: w.type,
-          subtype: w.subtype
+          subtype: w.subtype || null,
         }));
       }
     });
@@ -380,15 +380,15 @@ const handleScheduleUpdate = async () => {
     console.log('Processed workout_types:', workout_types);
 
     const schedule = Object.keys(tempWorkoutTypes)
-      .filter(dayIndex => tempWorkoutTypes[dayIndex]?.length > 0)
-      .map(dayIndex => parseInt(dayIndex));
+      .filter((dayIndex) => tempWorkoutTypes[dayIndex]?.length > 0)
+      .map((dayIndex) => parseInt(dayIndex));
 
     const updatedSettings = {
       ...workoutSettings,
       schedule,
       workout_types,
       workouts_per_week: schedule.length,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     // Debug log
@@ -399,14 +399,14 @@ const handleScheduleUpdate = async () => {
       .upsert(updatedSettings);
 
     if (error) throw error;
-    
+
     setWorkoutSettings(updatedSettings);
     setEditingSchedule(false);
     setTempWorkoutTypes({});
-    
+
     // Force refresh of scheduled workouts by updating plan start date
     setPlanStartDate(new Date().toISOString().split('T')[0]);
-    
+
     toast.success('Schedule updated successfully');
   } catch (error) {
     console.error('Error updating schedule:', error);
@@ -833,56 +833,18 @@ const getScheduledWorkouts = () => {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">Weekly Schedule</h3>
-                    {editingSchedule ? (
-                      <div className="space-x-2">
-                        <button
-                          onClick={handleScheduleUpdate}
-                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingSchedule(false);
-                            setTempSchedule([]);
-                            setEditingWorkoutDay(null);
-                          }}
-                          className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleEditScheduleClick}
-                        className="text-sm text-blue-500 hover:text-blue-600"
-                      >
-                        Edit Schedule
-                      </button>
-                    )}
+                    {/* Removed Edit Schedule button */}
                   </div>
 
                   <div className="grid grid-cols-7 gap-2">
                     {DAYS.map((day, index) => {
-                      const workouts = editingSchedule
-                        ? (tempWorkoutTypes[index] || [])
-                        : getWorkoutsForDay(index, workoutSettings);
-
-                      const isWorkoutDay = editingSchedule
-                        ? tempWorkoutTypes[index]?.length > 0
-                        : workoutSettings?.schedule?.includes(index);
+                      const workouts = getWorkoutsForDay(index, workoutSettings);
+                      const isWorkoutDay = workoutSettings?.schedule?.includes(index);
 
                       return (
                         <div
                           key={day}
-                          className={`min-h-[120px] space-y-2 text-center ${
-                            editingSchedule ? 'cursor-pointer' : ''
-                          }`}
-                          onClick={() => {
-                            if (editingSchedule) {
-                              setEditingWorkoutDay(index);
-                            }
-                          }}
+                          className="min-h-[120px] space-y-2 text-center"
                         >
                           <div className="text-sm font-medium">{day.slice(0, 3)}</div>
                           <div className={`space-y-1 ${
@@ -913,19 +875,6 @@ const getScheduledWorkouts = () => {
                       );
                     })}
                   </div>
-
-                  {/* Workout Type Selector Modal */}
-                  {editingWorkoutDay !== null && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="max-w-md w-full">
-                        <WorkoutTypeSelector
-                          workoutType={tempWorkoutTypes[editingWorkoutDay] || []}
-                          onSelect={(workouts) => handleWorkoutTypeSelect(editingWorkoutDay, workouts)}
-                          onCancel={() => setEditingWorkoutDay(null)}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Scheduled Workouts */}
