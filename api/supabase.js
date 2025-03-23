@@ -26,6 +26,26 @@ function getSupabaseInstance() {
   return supabaseInstance;
 }
 
+export function clearSupabaseCache() {
+  // Reset the schema cache
+  supabase.rest.schemas = [];
+  
+  // Force a new initialization of the client
+  supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+      db: {
+        schema: 'public'
+      }
+    }
+  );
+}
+
 const supabase = getSupabaseInstance();
 
 if (process.env.NODE_ENV === 'development') {

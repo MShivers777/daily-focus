@@ -93,9 +93,6 @@ export default function ScheduleForm({ schedule, workoutDuration, onChange, onNe
                     )}
                   </div>
                 ))}
-                {workoutTypes[index]?.length === 0 && (
-                  <div className="text-xs text-gray-500">Rest</div>
-                )}
               </div>
             </div>
           ))}

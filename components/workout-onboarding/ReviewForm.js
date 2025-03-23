@@ -9,25 +9,34 @@ import { BASE_WORKOUT_SCHEDULE, STRENGTH_WORKOUT_TYPES, CARDIO_WORKOUT_TYPES } f
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function generateWorkoutPlan(formData) {
-  // Use selected workouts if available, otherwise fall back to default pattern
   if (formData.selectedWorkouts && formData.selectedWorkouts.length > 0) {
     return Array(2).fill().map((_, weekIndex) => {
       return DAYS.map((day, dayIndex) => {
-        // Find workouts scheduled for this day
+        // Find all workouts scheduled for this day
         const dayWorkouts = formData.selectedWorkouts.filter(
           workout => workout.day.toLowerCase() === day.toLowerCase()
         );
 
+        // Handle alternating workouts for biweekly frequency
+        const workoutsForThisWeek = dayWorkouts.filter(workout => {
+          if (workout.frequency !== 'biweekly') return true;
+          // For biweekly workouts, alternate between weeks
+          const workoutIndex = dayWorkouts.findIndex(w => 
+            w.type === workout.type && w.subtype === workout.subtype
+          );
+          return weekIndex % 2 === workoutIndex % 2;
+        });
+
         return {
           dayIndex,
           dayName: day,
-          isSelected: dayWorkouts.length > 0,
-          workout: dayWorkouts.length > 0 ? {
-            type: dayWorkouts[0].type,
-            subtype: dayWorkouts[0].subtype,
+          isSelected: workoutsForThisWeek.length > 0,
+          workouts: workoutsForThisWeek.map(w => ({
+            type: w.type,
+            subtype: w.subtype,
             duration: formData.workoutDuration,
-            frequency: dayWorkouts[0].frequency
-          } : null
+            frequency: w.frequency
+          }))
         };
       });
     });
@@ -64,7 +73,7 @@ function generateWorkoutPlan(formData) {
   });
 }
 
-const SortableWorkout = ({ workout, dayName, id, onDoubleClick }) => {
+const SortableWorkout = ({ workouts = [], dayName, id, onDoubleClick }) => {
   const {
     attributes,
     listeners,
@@ -81,28 +90,40 @@ const SortableWorkout = ({ workout, dayName, id, onDoubleClick }) => {
   return (
     <div className="flex items-center justify-between p-2 rounded">
       <div className="w-20 text-sm font-medium">{dayName}</div>
-      {workout && (
-        <div
-          ref={setNodeRef}
-          style={style}
-          {...attributes}
-          {...listeners}
-          onDoubleClick={onDoubleClick}
-          className={`flex-1 p-2 rounded cursor-move flex items-center justify-between ${
-            workout.type === 'Strength' 
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-              : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
-          }`}
-        >
-          <span className="text-sm font-medium">{workout.type}</span>
-          {workout.subtype && (
-            <span className="text-xs opacity-75 ml-1">
-              : {workout.subtype.replace(/_/g, ' ')}
-            </span>
-          )}
-          <span className="text-sm">{workout.duration} min</span>
-        </div>
-      )}
+      <div className="flex-1 space-y-1">
+        {workouts.map((workout, idx) => (
+          <div
+            key={`${id}-${idx}`}
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            onDoubleClick={() => onDoubleClick(idx)}
+            className={`p-2 rounded cursor-move flex items-center justify-between ${
+              workout.type === 'Strength' 
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200'
+            }`}
+          >
+            <div>
+              <span className="text-sm font-medium">{workout.type}</span>
+              {workout.subtype && (
+                <span className="text-xs opacity-75 ml-1">
+                  : {workout.subtype.replace(/_/g, ' ')}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm">{workout.duration}min</span>
+              {workout.frequency === 'biweekly' && (
+                <span className="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded">
+                  Alt. Weeks
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -137,8 +158,8 @@ const WorkoutWeek = ({ week, weekIndex, onReorder, onEditWorkout }) => {
                 key={`week-${weekIndex}-${day.dayIndex}`}
                 id={`week-${weekIndex}-${day.dayIndex}`}
                 dayName={day.dayName}
-                workout={day.workout}
-                onDoubleClick={() => onEditWorkout(weekIndex, day.dayIndex)}
+                workouts={day.workouts}
+                onDoubleClick={(workoutIndex) => onEditWorkout(weekIndex, day.dayIndex, workoutIndex)}
               />
             ))}
           </div>
@@ -172,15 +193,15 @@ export default function ReviewForm({ formData, onBack, onSubmit }) {
     });
   };
 
-  const handleEditWorkout = (weekIndex, dayIndex) => {
-    setEditingWorkout({ weekIndex, dayIndex, ...workoutPlan[weekIndex][dayIndex].workout });
+  const handleEditWorkout = (weekIndex, dayIndex, workoutIndex) => {
+    setEditingWorkout({ weekIndex, dayIndex, workoutIndex, ...workoutPlan[weekIndex][dayIndex].workouts[workoutIndex] });
   };
 
   const handleSaveWorkoutEdit = () => {
     setWorkoutPlan(prev => {
       const newPlan = [...prev];
-      const { weekIndex, dayIndex, ...updatedWorkout } = editingWorkout;
-      newPlan[weekIndex][dayIndex].workout = updatedWorkout;
+      const { weekIndex, dayIndex, workoutIndex, ...updatedWorkout } = editingWorkout;
+      newPlan[weekIndex][dayIndex].workouts[workoutIndex] = updatedWorkout;
       return newPlan;
     });
     setEditingWorkout(null);

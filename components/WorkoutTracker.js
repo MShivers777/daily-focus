@@ -502,72 +502,51 @@ const calculateProgressiveLoads = (baseLoads, totalWeeks = 16) => {
   return loads;
 };
 
-// Update getScheduledWorkouts to use the new load calculation
+// Helper function to get workouts for a specific day - consolidated version
+const getWorkoutsForDay = (dayIndex, settings) => {
+  try {
+    const selectedWorkouts = settings?.selected_workouts || [];
+    const dayName = DAYS[dayIndex].toLowerCase();
+
+    // Filter workouts for the specific day
+    const dayWorkouts = selectedWorkouts.filter(workout => workout.day === dayName);
+
+    // Debug log
+    console.log(`Getting workouts for day ${dayIndex} (${dayName}):`, dayWorkouts);
+
+    return dayWorkouts;
+  } catch (error) {
+    console.error(`Error getting workouts for day ${dayIndex}:`, error);
+    return [];
+  }
+};
+
+// Update getScheduledWorkouts to use the consolidated getWorkoutsForDay
 const getScheduledWorkouts = () => {
   const workouts = [];
-  if (!workoutSettings || !planStartDate) return [];
+  if (!workoutSettings) return workouts;
 
-  const startDate = new Date(planStartDate);
-  const previousWeekDate = new Date(startDate);
-  previousWeekDate.setDate(previousWeekDate.getDate() - 7);
-  
-  const schedule = workoutSettings.schedule || [];
-  const workoutTypes = workoutSettings.workout_types || {};
-  
-  // Get latest loads and calculate progressive loads for 16 weeks
-  const baseLoads = getLatestLoads(history, previousWeekDate);
-  const weeklyLoads = calculateProgressiveLoads(baseLoads, 16);
-
-  // Generate 16 weeks of workouts
-  for (let week = 0; week < 16; week++) {
-    for (let i = 0; i < 7; i++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + (week * 7) + i);
-      
-      if (schedule.includes(i)) {
-        const isDeload = (week + 1) % 4 === 0; // Every 4th week is deload
-        const weeklyLoad = weeklyLoads[week];
-        
-        // Get the workout type(s) for this day
-        let dayWorkouts = workoutTypes[i];
-        
-        // Normalize dayWorkouts to always be an array
-        if (!dayWorkouts) {
-          // No workouts defined, use default
-          dayWorkouts = [{
-            type: 'Strength',
-            subtype: null
-          }];
-        } else if (!Array.isArray(dayWorkouts)) {
-          // Single workout object - convert to array
-          dayWorkouts = [{
-            type: dayWorkouts.type || 'Strength',
-            subtype: dayWorkouts.subtype || null
-          }];
-        }
-
-        // Now dayWorkouts is guaranteed to be an array
-        dayWorkouts.forEach(workout => {
-          if (workout && workout.type) { // Add extra validation
-            workouts.push({
-              date: currentDate,
-              type: workout.type,
-              subtype: workout.subtype || null,
-              duration: workoutSettings.workout_duration || 60,
-              isDeload,
-              deloadType: 'Recovery/Deload Week',
-              planned: true,
-              strength_volume: workout.type === 'Strength' ? weeklyLoad.strength : 0,
-              cardio_load: workout.type === 'Cardio' ? weeklyLoad.cardio : 0
-            });
-          }
-        });
-      }
-    }
-  }
+  DAYS.forEach((_, dayIndex) => {
+    const dayWorkouts = getWorkoutsForDay(dayIndex, workoutSettings);
+    dayWorkouts.forEach(workout => {
+      const date = new Date(planStartDate);
+      date.setDate(date.getDate() + dayIndex);
+      workouts.push({
+        date: new Date(date), // Ensure it's a Date object
+        type: workout.type,
+        subtype: workout.subtype || null,
+        duration: workout.duration || workoutSettings.workout_duration,
+        planned: true,
+      });
+    });
+  });
 
   return workouts;
 };
+
+useEffect(() => {
+  setScheduledWorkouts(getScheduledWorkouts());
+}, [workoutSettings, planStartDate]);
 
   const cycleWorkoutType = (current, subtype) => {
     if (!current) return { type: 'Strength', subtype: null };
@@ -630,26 +609,6 @@ const getScheduledWorkouts = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false); // Close the modal
     setSelectedWorkoutsForModal([]);
-  };
-
-  // Helper function to get workouts for a specific day
-  const getWorkoutsForDay = (dayIndex, settings) => {
-    try {
-      if (!settings?.workout_types) return [];
-      
-      // Debug log
-      console.log(`Getting workouts for day ${dayIndex}:`, settings.workout_types[dayIndex]);
-      
-      const dayWorkouts = settings.workout_types[dayIndex];
-      if (!dayWorkouts) return [];
-      
-      // Ensure we're returning an array
-      return Array.isArray(dayWorkouts) ? dayWorkouts : [];
-      
-    } catch (error) {
-      console.error(`Error getting workouts for day ${dayIndex}:`, error);
-      return [];
-    }
   };
 
   return (
@@ -799,10 +758,10 @@ const getScheduledWorkouts = () => {
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-semibold mb-4">Calendar</h2>
               <Calendar 
-                workouts={(getScheduledWorkouts() || []).concat(
-                  (history || []).filter(entry => !entry.planned).map(entry => ({
+                workouts={scheduledWorkouts.concat(
+                  history.map(entry => ({
                     ...entry,
-                    date: entry.workout_date
+                    date: new Date(entry.workout_date),
                   }))
                 )}
                 selectedDate={selectedDate}
@@ -889,7 +848,7 @@ const getScheduledWorkouts = () => {
                         }`}>
                           <div className="space-y-1">
                             <div className="text-sm font-medium">
-                              {workout.date.toLocaleDateString('en-US', { 
+                              {new Date(workout.date).toLocaleDateString('en-US', { 
                                 weekday: 'short',
                                 month: 'short',
                                 day: 'numeric' 

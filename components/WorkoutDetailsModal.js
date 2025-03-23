@@ -15,7 +15,10 @@ export default function WorkoutDetailsModal({ workouts, onClose, onUpdate }) {
   const handleSaveEdit = () => {
     const updatedWorkouts = [...workouts];
     updatedWorkouts[editingIndex] = editedWorkout;
-    onUpdate(updatedWorkouts);
+    // Only call onUpdate if it exists
+    if (onUpdate) {
+      onUpdate(updatedWorkouts);
+    }
     setEditingIndex(null);
     setEditedWorkout(null);
   };

@@ -62,26 +62,19 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
 
   // Get workouts for a specific day - updated to compare dates in UTC
   const getWorkoutsForDay = (date) => {
-    if (!workouts || !Array.isArray(workouts) || workouts.length === 0) return [];
-
-    // Format the date as YYYY-MM-DD in UTC for comparison
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     const day = String(date.getUTCDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
 
     return workouts.filter(workout => {
-      if (!workout) return false;
-
-      const workoutDate = new Date(workout.date); // Assume workout.date is in ISO format
-      const workoutYear = workoutDate.getUTCFullYear();
-      const workoutMonth = String(workoutDate.getUTCMonth() + 1).padStart(2, '0');
-      const workoutDay = String(workoutDate.getUTCDate()).padStart(2, '0');
-      const workoutDateString = `${workoutYear}-${workoutMonth}-${workoutDay}`;
-
-      return workoutDateString === dateString;
+      const workoutDate = new Date(workout.date).toISOString().split('T')[0];
+      return workoutDate === dateString;
     });
   };
+
+  // Debug log to verify the workouts for each day
+  console.log('Workouts for calendar:', workouts);
 
   // Navigate to previous month
   const prevMonth = () => {
@@ -193,7 +186,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
               {dayWorkouts.length > 0 && (
                 <div className="mt-2 space-y-1 text-xs max-h-24 overflow-y-auto">
                   {dayWorkouts.map((workout, index) => {
-                    const workoutType = workout.type;
+                    const workoutType = workout.workout_type || workout.type; // Ensure compatibility with both fields
                     const workoutSubtype = workout.subtype;
                     const workoutLabel = getWorkoutTypeLabel(workoutType, workoutSubtype);
 
@@ -205,7 +198,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
                         }`}
                       >
                         <div className="text-xs font-medium break-words">
-                          {workoutLabel}
+                          {workoutLabel || 'Unknown'}
                         </div>
                         <div className="flex gap-1 text-xs">
                           {workout.strength_volume > 0 && (

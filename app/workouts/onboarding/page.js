@@ -11,6 +11,8 @@ import WorkoutSelectionForm from '../../../components/workout-onboarding/Workout
 import toast from 'react-hot-toast';
 import { default as ReviewFormComponent } from '../../../components/workout-onboarding/ReviewForm';  // Fix import
 
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
 export default function WorkoutOnboarding() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -24,7 +26,12 @@ export default function WorkoutOnboarding() {
     selectedWorkouts: [], // New field for selected workouts
     baselines: [],
     trainingExperience: 0,
-    planStartDate: new Date().toISOString().split('T')[0] // Default to today's date
+    planStartDate: new Date().toISOString().split('T')[0],
+    planEndDate: (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + 12 * 7); // 12 weeks
+      return date.toISOString().split('T')[0];
+    })()
   });
 
   useEffect(() => {
@@ -57,7 +64,12 @@ export default function WorkoutOnboarding() {
             baselines: data.baselines || [],
             trainingExperience: data.training_experience || 0,
             heartRates: data.heart_rates || {},
-            planStartDate: data.plan_start_date || new Date().toISOString().split('T')[0]
+            planStartDate: data.plan_start_date || new Date().toISOString().split('T')[0],
+            planEndDate: data.plan_end_date || (() => {
+              const date = new Date();
+              date.setDate(date.getDate() + 12 * 7);
+              return date.toISOString().split('T')[0];
+            })()
           });
         }
       } catch (error) {
@@ -68,6 +80,63 @@ export default function WorkoutOnboarding() {
 
     fetchExistingSettings();
   }, []);
+
+  const getScheduledWorkouts = () => {
+    const workouts = [];
+    const schedule = formData.schedule || [];
+    const selectedWorkouts = formData.selectedWorkouts || [];
+
+    schedule.forEach((dayIndex, i) => {
+      if (dayIndex !== null) {
+        const dayWorkouts = selectedWorkouts.filter(workout => workout.day === DAYS[dayIndex]);
+        dayWorkouts.forEach(workout => {
+          workouts.push({
+            day: DAYS[dayIndex],
+            type: workout.type,
+            subtype: workout.subtype || null,
+            duration: workout.duration || formData.workoutDuration,
+          });
+        });
+      }
+    });
+
+    return workouts;
+  };
+
+  const generateScheduledWorkouts = () => {
+    const workouts = [];
+    const startDate = new Date(formData.planStartDate);
+    const endDate = new Date(formData.planEndDate);
+    const selectedWorkouts = formData.selectedWorkouts || [];
+
+    while (startDate <= endDate) {
+      formData.schedule.forEach((dayIndex, i) => {
+        if (dayIndex !== null) {
+          const dayWorkouts = selectedWorkouts.filter(workout => workout.day === DAYS[dayIndex]);
+          dayWorkouts.forEach(workout => {
+            const workoutDate = new Date(startDate);
+            workoutDate.setDate(workoutDate.getDate() + dayIndex);
+            
+            if (workoutDate <= endDate) {
+              workouts.push({
+                workout_date: workoutDate.toISOString().split('T')[0],
+                workout_type: workout.type,
+                subtype: workout.subtype || null,
+                strength_volume: 0,
+                cardio_load: 0,
+                planned: true,
+                user_id: null,
+                note: ''
+              });
+            }
+          });
+        }
+      });
+      startDate.setDate(startDate.getDate() + 7);
+    }
+
+    return workouts;
+  };
 
   const handleStepComplete = (stepData) => {
     setFormData(prev => ({ ...prev, ...stepData }));
@@ -85,57 +154,65 @@ export default function WorkoutOnboarding() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session found');
 
-      // Convert selected workouts into workout_types array
-      const workout_types = Array(7).fill([]);
-      
-      // Map selected workouts to days of the week
-      formData.selectedWorkouts.forEach(workout => {
-        const dayIndex = DAYS.findIndex(day => 
-          day.toLowerCase() === workout.day.toLowerCase()
-        );
-        if (dayIndex !== -1) {
-          workout_types[dayIndex] = [
-            {
-              type: workout.type,
-              subtype: workout.subtype,
-              frequency: workout.frequency
-            }
-          ];
-        }
+      // Validate required data
+      if (!formData.goals || formData.goals.length === 0) {
+        throw new Error('Please select at least one goal');
+      }
+
+      // Debug log the data being saved
+      console.log('Saving workout data:', {
+        selectedWorkouts: formData.selectedWorkouts,
+        schedule: formData.schedule
       });
 
-      const schedule = workout_types
-        .map((types, index) => types.length > 0 ? index : null)
-        .filter(day => day !== null);
+      // Generate planned workouts
+      const plannedWorkouts = generateScheduledWorkouts();
 
       const workoutSettings = {
         user_id: session.user.id,
         goals: formData.goals,
         training_experience: formData.trainingExperience || 0,
         workout_duration: formData.workoutDuration,
-        workouts_per_week: schedule.length,
-        deload_frequency: formData.deloadFrequency,
-        schedule,
-        workout_types,
-        selected_workouts: formData.selectedWorkouts,
+        workouts_per_week: formData.schedule.filter(day => day !== null).length,
+        deload_frequency: formData.deloadFrequency || 4,
+        schedule: formData.schedule
+          .map((day, index) => day !== null ? index : null)
+          .filter(day => day !== null),
+        workout_types: JSON.parse(JSON.stringify(formData.workoutTypes)),
+        selected_workouts: JSON.parse(JSON.stringify(formData.selectedWorkouts || [])),
         heart_rates: formData.heartRates || {},
         baselines: formData.baselines || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        plan_start_date: formData.planStartDate
+        plan_start_date: formData.planStartDate,
+        plan_end_date: formData.planEndDate
       };
 
-      // Debug logs
-      console.log('Saving workout settings:', workoutSettings);
-      console.log('Selected workouts:', formData.selectedWorkouts);
-      console.log('Generated workout_types:', workout_types);
+      // Debug log
+      console.log('Saving settings:', workoutSettings);
 
-      const { error } = await supabase
+      // Save settings
+      const { error: settingsError } = await supabase
         .from('user_workout_settings')
         .upsert(workoutSettings);
 
-      if (error) throw error;
+      if (settingsError) throw settingsError;
 
+      // Save planned workouts
+      if (plannedWorkouts.length > 0) {
+        const { error: workoutsError } = await supabase
+          .from('workouts')
+          .upsert(
+            plannedWorkouts.map(workout => ({
+              ...workout,
+              user_id: session.user.id
+            }))
+          );
+
+        if (workoutsError) throw workoutsError;
+      }
+
+      console.log('Save successful');
       toast.success('Workout preferences saved!');
       router.push('/workouts');
     } catch (error) {
@@ -188,14 +265,46 @@ export default function WorkoutOnboarding() {
               />
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-gray-800 dark:text-white">
-                  Select Plan Start Date
+                  Select Plan Dates
                 </h3>
-                <input
-                  type="date"
-                  value={formData.planStartDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, planStartDate: e.target.value }))}
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={formData.planStartDate}
+                      onChange={(e) => {
+                        const newStartDate = e.target.value;
+                        setFormData(prev => {
+                          // Ensure end date is at least 12 weeks after start date
+                          const endDate = new Date(newStartDate);
+                          endDate.setDate(endDate.getDate() + 12 * 7);
+                          return {
+                            ...prev,
+                            planStartDate: newStartDate,
+                            planEndDate: endDate.toISOString().split('T')[0]
+                          };
+                        });
+                      }}
+                      className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">End Date</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={formData.planEndDate}
+                        min={formData.planStartDate}
+                        onChange={(e) => setFormData(prev => ({ ...prev, planEndDate: e.target.value }))}
+                        className="flex-1 p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      />
+                      <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        ({Math.ceil((new Date(formData.planEndDate) - new Date(formData.planStartDate)) / (7 * 24 * 60 * 60 * 1000))} weeks)
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -231,7 +340,10 @@ export default function WorkoutOnboarding() {
           )}
           {currentStep === 5 && (
             <ReviewFormComponent
-              formData={formData}
+              formData={{
+                ...formData,
+                scheduledWorkouts: getScheduledWorkouts(),
+              }}
               onBack={handleBack}
               onSubmit={handleSubmit}
             />
