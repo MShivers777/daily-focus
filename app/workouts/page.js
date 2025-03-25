@@ -26,7 +26,7 @@ export default function WorkoutsPage() {
         </h1>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-2 mb-6">
+        <div className="flex space-x-2 mb-6 flex-wrap gap-2">
           <button
             onClick={() => setActiveTab('tracker')}
             className={`px-4 py-2 rounded-lg transition-all ${
@@ -47,12 +47,60 @@ export default function WorkoutsPage() {
           >
             Workout Planner
           </button>
+          <button
+            onClick={() => setActiveTab('zones')}
+            className={`px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'zones'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Zones
+          </button>
+          <button
+            onClick={() => setActiveTab('workouts')}
+            className={`px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'workouts'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Workouts
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'history'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            History
+          </button>
+          <button
+            onClick={() => setActiveTab('metrics')}
+            className={`px-4 py-2 rounded-lg transition-all ${
+              activeTab === 'metrics'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Body Metrics
+          </button>
         </div>
 
         {activeTab === 'tracker' ? (
           <WorkoutTracker />
-        ) : (
+        ) : activeTab === 'planner' ? (
           <WorkoutPlanner />
+        ) : activeTab === 'zones' ? (
+          <div>Zones content here</div>
+        ) : activeTab === 'workouts' ? (
+          <div>Workouts content here</div>
+        ) : activeTab === 'history' ? (
+          <div>History content here</div>
+        ) : (
+          <div>Body Metrics content here</div>
         )}
       </div>
     </div>

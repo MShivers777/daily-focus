@@ -646,6 +646,16 @@ useEffect(() => {
           >
             Workout Zones
           </button>
+          <button
+            onClick={() => setActiveTab('workouts')}
+            className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'workouts'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Workouts
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -700,3 +710,145 @@ useEffect(() => {
                   pattern="\d*"
                   placeholder="Strength Volume (lbs)" 
                   value={strengthVolume}
+                  onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <input 
+                  type="text" 
+                  inputMode="numeric"
+                  pattern="\d*"
+                  placeholder="Cardio Load (minutes)" 
+                  value={cardioLoad}
+                  onChange={(e) => handleNumberInput(e, setCardioLoad)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <textarea 
+                  placeholder="Notes" 
+                  value={note} 
+                  onChange={(e) => setNote(e.target.value)} 
+                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+                <button 
+                  type="submit" 
+                  className="w-full p-3 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-all"
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Save Workout'}
+                </button>
+              </form>
+            </div>
+
+            {/* Workout History */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Workout History</h2>
+              {history.length === 0 ? (
+                <p className="text-gray-600 dark:text-gray-400">No workouts recorded yet.</p>
+              ) : (
+                <ul className="space-y-4">
+                  {history.map((workout) => (
+                    <WorkoutHistoryItem 
+                      key={workout.id} 
+                      workout={workout} 
+                      onEdit={() => handleEditWorkout(workout)} 
+                      onDoubleClick={handleHistoryDoubleClick}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'zones' && (
+          <div className="lg:col-span-2 space-y-6">
+            {/* Render Workout Zones content */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Workout Zones</h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                View and manage your workout zones here.
+              </p>
+              {/* Add zones-specific components or logic here */}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'workouts' && (
+          <div className="lg:col-span-2 space-y-6"></div>
+            {/* Render Workouts content */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+                Workouts
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                View and manage your planned and completed workouts here.
+              </p>
+              {/* Add workouts-specific components or logic here */}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right Column */}
+      <div className="space-y-6">
+        {/* Load Ratios Graph */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <LoadRatiosHeader />
+          <LoadRatiosGraph 
+            metrics={metrics} 
+            visibleLines={visibleLines} 
+            toggleLine={toggleLine} 
+            isGraphExpanded={isGraphExpanded}
+            setIsGraphExpanded={setIsGraphExpanded}
+          />
+          <LoadRatioDisplay metrics={metrics} />
+        </div>
+
+        {/* Calendar */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <Calendar 
+            selectedDate={selectedDate} 
+            onDateSelect={handleDateSelect} 
+            scheduledWorkouts={scheduledWorkouts}
+            onDoubleClickWorkout={handleDoubleClickWorkout}
+          />
+        </div>
+
+        {/* Hydration Guide */}
+        {showHydrationGuide && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <HydrationGuide onClose={() => setShowHydrationGuide(false)} />
+          </div>
+        )}
+      </div>
+
+      {/* Workout Confirmation Modal */}
+      {showWorkoutConfirm && (
+        <WorkoutConfirmation 
+          existingWorkout={existingWorkout} 
+          pendingWorkout={pendingWorkout} 
+          onConfirm={saveWorkout} 
+          onCancel={() => setShowWorkoutConfirm(false)} 
+          onEdit={handleEdit}
+        />
+      )}
+
+      {/* Expanded Graph Modal */}
+      {isGraphExpanded && (
+        <ExpandedGraphModal 
+          metrics={metrics} 
+          visibleLines={visibleLines} 
+          toggleLine={toggleLine} 
+          onClose={() => setIsGraphExpanded(false)} 
+        />
+      )}
+
+      {/* Workout Details Modal */}
+      {isModalOpen && (
+        <WorkoutDetailsModal 
+          workouts={selectedWorkoutsForModal} 
+          onClose={handleCloseModal} 
+        />
+      )}
+    </div>
+  );
+}
