@@ -624,199 +624,100 @@ useEffect(() => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column */}
       <div className="lg:col-span-2 space-y-6">
-        {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => setActiveTab('track')}
-            className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'track'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Track Workout
-          </button>
-          <button
-            onClick={() => setActiveTab('plan')}
-            className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'zones'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Workout Zones
-          </button>
+        {/* Workout Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Add Workout</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input 
+              type="date" 
+              value={workoutDate} 
+              onChange={(e) => setWorkoutDate(e.target.value)} 
+              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Workout Type
+              </label>
+              <select
+                value={workoutType}
+                onChange={(e) => setWorkoutType(e.target.value)}
+                className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="Strength">Strength</option>
+                <option value="Cardio">Cardio</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Workout Subtype
+              </label>
+              <select
+                value={workoutSubtype}
+                onChange={(e) => setWorkoutSubtype(e.target.value)}
+                className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">General</option>
+                {(workoutType === 'Strength'
+                  ? STRENGTH_WORKOUT_TYPES
+                  : CARDIO_WORKOUT_TYPES
+                ).map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <input 
+              type="text" 
+              inputMode="numeric"
+              pattern="\d*"
+              placeholder="Strength Volume (lbs)" 
+              value={strengthVolume} 
+              onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
+              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+              disabled={workoutType !== 'Strength'}
+            />
+            <input 
+              type="text" 
+              inputMode="numeric"
+              pattern="\d*"
+              placeholder="Cardio Load" 
+              value={cardioLoad} 
+              onChange={(e) => handleNumberInput(e, setCardioLoad)} 
+              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+              disabled={workoutType !== 'Cardio'}
+            />
+            <textarea 
+              placeholder="Workout Notes" 
+              value={note} 
+              onChange={(e) => setNote(e.target.value)} 
+              rows="3"
+              className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" 
+            />
+            <button 
+              type="submit" 
+              className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all font-medium"
+            >
+              Save Workout
+            </button>
+          </form>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'track' && (
-          <>
-            {/* Existing Workout Form */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Add Workout</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <input 
-                  type="date" 
-                  value={workoutDate} 
-                  onChange={(e) => setWorkoutDate(e.target.value)} 
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                />
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Workout Type
-                  </label>
-                  <select
-                    value={workoutType}
-                    onChange={(e) => setWorkoutType(e.target.value)}
-                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="Strength">Strength</option>
-                    <option value="Cardio">Cardio</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Workout Subtype
-                  </label>
-                  <select
-                    value={workoutSubtype}
-                    onChange={(e) => setWorkoutSubtype(e.target.value)}
-                    className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="">General</option>
-                    {(workoutType === 'Strength'
-                      ? STRENGTH_WORKOUT_TYPES
-                      : CARDIO_WORKOUT_TYPES
-                    ).map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <input 
-                  type="text" 
-                  inputMode="numeric"
-                  pattern="\d*"
-                  placeholder="Strength Volume (lbs)" 
-                  value={strengthVolume} 
-                  onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                  disabled={workoutType !== 'Strength'}
-                />
-                <input 
-                  type="text" 
-                  inputMode="numeric"
-                  pattern="\d*"
-                  placeholder="Cardio Load" 
-                  value={cardioLoad} 
-                  onChange={(e) => handleNumberInput(e, setCardioLoad)} 
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-                  disabled={workoutType !== 'Cardio'}
-                />
-                <textarea 
-                  placeholder="Workout Notes" 
-                  value={note} 
-                  onChange={(e) => setNote(e.target.value)} 
-                  rows="3"
-                  className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" 
-                />
-                <button 
-                  type="submit" 
-                  className="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all font-medium"
-                >
-                  Save Workout
-                </button>
-              </form>
-            </div>
-
-            {/* Existing Preview Section */}
-            {previewLoads && (
-              <div className="lg:col-span-2">
-                <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Preview Loads
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p>Strength Acute: {previewLoads.strength_acute_load?.toFixed(2)}</p>
-                      <p>Strength Chronic: {previewLoads.strength_chronic_load?.toFixed(2)}</p>
-                      <p>Strength Ratio: {previewLoads.strength_ratio?.toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p>Cardio Acute: {previewLoads.cardio_acute_load?.toFixed(2)}</p>
-                      <p>Cardio Chronic: {previewLoads.cardio_chronic_load?.toFixed(2)}</p>
-                      <p>Cardio Ratio: {previewLoads.cardio_ratio?.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Calendar */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Calendar</h2>
+          <Calendar 
+            workouts={scheduledWorkouts.concat(
+              history.map(entry => ({
+                ...entry,
+                date: new Date(entry.workout_date),
+              }))
             )}
-
-            {/* Calendar View */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">Calendar</h2>
-              <Calendar 
-                workouts={scheduledWorkouts.concat(
-                  history.map(entry => ({
-                    ...entry,
-                    date: new Date(entry.workout_date),
-                  }))
-                )}
-                selectedDate={selectedDate}
-                onSelectDate={handleDateSelect}
-                onDoubleClickWorkout={handleDoubleClickWorkout} // Pass the handler
-              />
-            </div>
-          </>
-        )}
-        {activeTab === 'zones' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-              Training Zones
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { title: 'Intervals', description: 'High-intensity intervals with recovery periods' },
-                { title: 'Tempo', description: 'Sustained effort at threshold pace' },
-                { title: 'Steady State', description: 'Moderate intensity continuous effort' },
-                { title: 'Zone 2', description: 'Easy aerobic training' },
-                { title: 'Sprints', description: 'Maximum effort short intervals' },
-                { title: 'Hill Sprints', description: 'High-intensity uphill efforts' }
-              ].map((zone, index) => (
-                <div
-                  key={index}
-                  className="p-4 bg-gray-900 text-white rounded-lg shadow-md"
-                >
-                  <h3 className="text-lg font-semibold mb-2">{zone.title}</h3>
-                  <p className="text-sm text-gray-400">{zone.description}</p>
-                  <div className="mt-4 space-y-2">
-                    <input
-                      type="text"
-                      placeholder="Pace Range"
-                      className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Heart Rate Zone"
-                      className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Typical Duration"
-                      className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                Edit Zones
-              </button>
-            </div>
-          </div>
-        )}
+            selectedDate={selectedDate}
+            onSelectDate={handleDateSelect}
+            onDoubleClickWorkout={handleDoubleClickWorkout}
+          />
+        </div>
       </div>
 
       {/* Right Column */}

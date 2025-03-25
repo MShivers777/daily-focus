@@ -4,32 +4,14 @@ import { useState, useEffect } from 'react';
 import supabase from '../api/supabase';
 import toast from 'react-hot-toast';
 
-const WORKOUT_TYPES = {
-  intervals: { 
-    name: 'Intervals', 
-    description: 'High-intensity intervals with recovery periods' 
-  },
-  tempo: { 
-    name: 'Tempo', 
-    description: 'Sustained effort at threshold pace' 
-  },
-  steady_state: { 
-    name: 'Steady State', 
-    description: 'Moderate intensity continuous effort' 
-  },
-  zone2: { 
-    name: 'Zone 2', 
-    description: 'Easy aerobic training' 
-  },
-  sprints: { 
-    name: 'Sprints', 
-    description: 'Maximum effort short intervals' 
-  },
-  hill_sprints: { 
-    name: 'Hill Sprints', 
-    description: 'High-intensity uphill efforts' 
-  }
-};
+const WORKOUT_TYPES = [
+  { id: 'intervals', title: 'Intervals', description: 'High-intensity intervals with recovery periods' },
+  { id: 'tempo', title: 'Tempo', description: 'Sustained effort at threshold pace' },
+  { id: 'steady_state', title: 'Steady State', description: 'Moderate intensity continuous effort' },
+  { id: 'zone2', title: 'Zone 2', description: 'Easy aerobic training' },
+  { id: 'sprints', title: 'Sprints', description: 'Maximum effort short intervals' },
+  { id: 'hill_sprints', title: 'Hill Sprints', description: 'High-intensity uphill efforts' }
+];
 
 export default function CardioZones() {
   const [zones, setZones] = useState({});
@@ -105,12 +87,49 @@ export default function CardioZones() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          Training Zones
-        </h2>
-        <button
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+        Training Zones
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {WORKOUT_TYPES.map((zone, index) => (
+          <div
+            key={zone.id}
+            className="p-4 bg-gray-900 text-white rounded-lg shadow-md"
+          >
+            <h3 className="text-lg font-semibold mb-2">{zone.title}</h3>
+            <p className="text-sm text-gray-400">{zone.description}</p>
+            <div className="mt-4 space-y-2">
+              <input
+                type="text"
+                placeholder="Pace Range"
+                value={editedZones[zone.id]?.pace || ''}
+                onChange={(e) => handleEdit(zone.id, 'pace', e.target.value)}
+                disabled={!isEditing}
+                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+              />
+              <input
+                type="text"
+                placeholder="Heart Rate Zone"
+                value={editedZones[zone.id]?.heartRate || ''}
+                onChange={(e) => handleEdit(zone.id, 'heartRate', e.target.value)}
+                disabled={!isEditing}
+                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+              />
+              <input
+                type="text"
+                placeholder="Typical Duration"
+                value={editedZones[zone.id]?.duration || ''}
+                onChange={(e) => handleEdit(zone.id, 'duration', e.target.value)}
+                disabled={!isEditing}
+                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex justify-end">
+        <button 
           onClick={() => {
             if (isEditing) {
               handleSave();
@@ -118,71 +137,10 @@ export default function CardioZones() {
               setIsEditing(true);
             }
           }}
-          className={`px-4 py-2 rounded-lg transition-all ${
-            isEditing 
-              ? 'bg-green-500 hover:bg-green-600' 
-              : 'bg-blue-500 hover:bg-blue-600'
-          } text-white`}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
         >
           {isEditing ? 'Save Changes' : 'Edit Zones'}
         </button>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {Object.entries(WORKOUT_TYPES).map(([type, { name, description }]) => (
-          <div 
-            key={type}
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm"
-          >
-            <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">
-              {name}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {description}
-            </p>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Pace Range
-                </label>
-                <input
-                  type="text"
-                  value={editedZones[type]?.pace || ''}
-                  onChange={(e) => handleEdit(type, 'pace', e.target.value)}
-                  disabled={!isEditing}
-                  placeholder="e.g., 8:00-9:00 min/mile"
-                  className="w-full mt-1 p-2 rounded border disabled:bg-gray-100 dark:disabled:bg-gray-700"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Heart Rate Zone
-                </label>
-                <input
-                  type="text"
-                  value={editedZones[type]?.heartRate || ''}
-                  onChange={(e) => handleEdit(type, 'heartRate', e.target.value)}
-                  disabled={!isEditing}
-                  placeholder="e.g., 150-160 bpm"
-                  className="w-full mt-1 p-2 rounded border disabled:bg-gray-100 dark:disabled:bg-gray-700"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Typical Duration
-                </label>
-                <input
-                  type="text"
-                  value={editedZones[type]?.duration || ''}
-                  onChange={(e) => handleEdit(type, 'duration', e.target.value)}
-                  disabled={!isEditing}
-                  placeholder="e.g., 30-45 minutes"
-                  className="w-full mt-1 p-2 rounded border disabled:bg-gray-100 dark:disabled:bg-gray-700"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
