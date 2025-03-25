@@ -60,7 +60,7 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
     setCalendarDays(days);
   }, [currentMonth]);
 
-  // Get workouts for a specific day - updated to compare dates in UTC
+  // Get workouts for a specific day - include both planned and completed workouts
   const getWorkoutsForDay = (date) => {
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -190,12 +190,16 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
                     const workoutSubtype = workout.subtype;
                     const workoutLabel = getWorkoutTypeLabel(workoutType, workoutSubtype);
 
+                    // Determine the color based on whether the workout is planned or completed
+                    const isCompleted = !workout.planned;
+                    const bgColor = isCompleted ? 'bg-green-900/40 text-green-200' : 
+                                    workoutType === 'Strength' ? 'bg-blue-900/40 text-blue-200' : 
+                                    'bg-orange-900/40 text-orange-200';
+
                     return (
                       <div
                         key={index}
-                        className={`p-1 rounded ${
-                          workoutType === 'Strength' ? 'bg-blue-900/40 text-blue-200' : 'bg-orange-900/40 text-orange-200'
-                        }`}
+                        className={`p-1 rounded ${bgColor}`}
                       >
                         <div className="text-xs font-medium break-words">
                           {workoutLabel || 'Unknown'}

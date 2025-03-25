@@ -109,14 +109,24 @@ export default function WorkoutOnboarding() {
     const endDate = new Date(formData.planEndDate);
     const selectedWorkouts = formData.selectedWorkouts || [];
 
+    // Loop through each week until end date
+    let weekIndex = 0; // Track the current week index for alternating workouts
     while (startDate <= endDate) {
-      formData.schedule.forEach((dayIndex, i) => {
+      formData.schedule.forEach((dayIndex) => {
         if (dayIndex !== null) {
-          const dayWorkouts = selectedWorkouts.filter(workout => workout.day === DAYS[dayIndex]);
+          const dayWorkouts = selectedWorkouts.filter(workout => {
+            // Handle alternating biweekly workouts
+            if (workout.alternating && workout.alternating === 'biweekly') {
+              const isEvenWeek = weekIndex % 2 === 0;
+              return isEvenWeek ? workout.alternatingIndex === 0 : workout.alternatingIndex === 1;
+            }
+            return true; // Include all other workouts
+          });
+
           dayWorkouts.forEach(workout => {
             const workoutDate = new Date(startDate);
             workoutDate.setDate(workoutDate.getDate() + dayIndex);
-            
+
             if (workoutDate <= endDate) {
               workouts.push({
                 workout_date: workoutDate.toISOString().split('T')[0],
@@ -132,7 +142,10 @@ export default function WorkoutOnboarding() {
           });
         }
       });
+
+      // Move to next week
       startDate.setDate(startDate.getDate() + 7);
+      weekIndex++; // Increment the week index
     }
 
     return workouts;
@@ -190,6 +203,17 @@ export default function WorkoutOnboarding() {
 
       // Debug log
       console.log('Saving settings:', workoutSettings);
+
+      // Delete existing planned workouts in the plan time period
+      const { error: deleteError } = await supabase
+        .from('workouts')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('planned', true)
+        .gte('workout_date', formData.planStartDate)
+        .lte('workout_date', formData.planEndDate);
+
+      if (deleteError) throw deleteError;
 
       // Save settings
       const { error: settingsError } = await supabase

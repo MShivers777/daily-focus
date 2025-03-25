@@ -44,6 +44,9 @@ export default function WorkoutHistoryItem({ entry, onUpdate }) {
             <span className="mx-2">•</span>
             Cardio: {entry.cardio_load}
           </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {entry.workout_type} {entry.subtype ? `(${entry.subtype})` : ''}
+          </p>
           {entry.note && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
               {entry.note}
