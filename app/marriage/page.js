@@ -9,6 +9,24 @@ import LinkedAccount from '../../components/LinkedAccount';
 export default function MarriagePage() {
   const router = useRouter();
 
+  const handleReconfigure = () => {
+    console.log('Attempting to navigate to marriage onboarding...');
+    console.log('Current route:', window.location.pathname);
+    console.log('Target route:', '/focus/marriage/onboarding');
+    
+    // Try navigation and catch any errors
+    try {
+      router.push('/focus/marriage/onboarding');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      
+      // Log available routes in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Available pages directory structure:', router);
+      }
+    }
+  };
+
   return (
     <div className="relative">
       <button
@@ -20,9 +38,17 @@ export default function MarriagePage() {
       </button>
       
       <div className="max-w-4xl mx-auto pt-16">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-          Marriage Focus
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+            Marriage Focus
+          </h1>
+          <button
+            onClick={handleReconfigure}
+            className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all"
+          >
+            Reconfigure
+          </button>
+        </div>
         
         <div className="space-y-6">
           {/* Today's Focus Card */}

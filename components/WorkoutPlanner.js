@@ -140,19 +140,7 @@ export default function WorkoutPlanner() {
             onClick={() => router.push('/workouts/onboarding')}
             className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all"
           >
-            Full Reconfigure
-          </button>
-          <button
-            onClick={() => router.push('/workouts/zones')}
-            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all"
-          >
-            Training Zones
-          </button>
-          <button
-            onClick={() => setShowPlanForm(true)}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"
-          >
-            Plan New Workout
+            Reconfigure Plan
           </button>
           <button 
             onClick={() => setView('list')}

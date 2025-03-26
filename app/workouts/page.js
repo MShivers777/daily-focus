@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import BackIcon from '../../components/icons/BackIcon';
 import WorkoutTracker from '../../components/WorkoutTracker';
 import WorkoutPlanner from '../../components/WorkoutPlanner';
+import CardioZones from '../../components/CardioZones';
 
 export default function WorkoutsPage() {
   const router = useRouter();
@@ -94,7 +95,7 @@ export default function WorkoutsPage() {
         ) : activeTab === 'planner' ? (
           <WorkoutPlanner />
         ) : activeTab === 'zones' ? (
-          <div>Zones content here</div>
+          <CardioZones />
         ) : activeTab === 'workouts' ? (
           <div>Workouts content here</div>
         ) : activeTab === 'history' ? (
