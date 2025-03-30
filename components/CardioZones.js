@@ -87,60 +87,80 @@ export default function CardioZones() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-        Training Zones
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {WORKOUT_TYPES.map((zone, index) => (
-          <div
-            key={zone.id}
-            className="p-4 bg-gray-900 text-white rounded-lg shadow-md"
-          >
-            <h3 className="text-lg font-semibold mb-2">{zone.title}</h3>
-            <p className="text-sm text-gray-400">{zone.description}</p>
-            <div className="mt-4 space-y-2">
-              <input
-                type="text"
-                placeholder="Pace Range"
-                value={editedZones[zone.id]?.pace || ''}
-                onChange={(e) => handleEdit(zone.id, 'pace', e.target.value)}
-                disabled={!isEditing}
-                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
-              />
-              <input
-                type="text"
-                placeholder="Heart Rate Zone"
-                value={editedZones[zone.id]?.heartRate || ''}
-                onChange={(e) => handleEdit(zone.id, 'heartRate', e.target.value)}
-                disabled={!isEditing}
-                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
-              />
-              <input
-                type="text"
-                placeholder="Typical Duration"
-                value={editedZones[zone.id]?.duration || ''}
-                onChange={(e) => handleEdit(zone.id, 'duration', e.target.value)}
-                disabled={!isEditing}
-                className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
-              />
-            </div>
-          </div>
-        ))}
+    <div className="space-y-6">
+      {/* VDOT Calculator Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+          VDOT Calculator
+        </h2>
+        <div className="w-full overflow-hidden rounded-lg">
+          <iframe 
+            src='https://vdoto2.com/calculator/embed' 
+            width='100%' 
+            height='1600' 
+            className="border-0"
+            title="VDOT Calculator"
+          />
+        </div>
       </div>
-      <div className="mt-4 flex justify-end">
-        <button 
-          onClick={() => {
-            if (isEditing) {
-              handleSave();
-            } else {
-              setIsEditing(true);
-            }
-          }}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-        >
-          {isEditing ? 'Save Changes' : 'Edit Zones'}
-        </button>
+
+      {/* Training Zones Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+            Training Zones
+          </h2>
+          <button 
+            onClick={() => {
+              if (isEditing) {
+                handleSave();
+              } else {
+                setIsEditing(true);
+              }
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            {isEditing ? 'Save Changes' : 'Edit Zones'}
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {WORKOUT_TYPES.map((zone, index) => (
+            <div
+              key={zone.id}
+              className="p-4 bg-gray-900 text-white rounded-lg shadow-md"
+            >
+              <h3 className="text-lg font-semibold mb-2">{zone.title}</h3>
+              <p className="text-sm text-gray-400">{zone.description}</p>
+              <div className="mt-4 space-y-2">
+                <input
+                  type="text"
+                  placeholder="Pace Range"
+                  value={editedZones[zone.id]?.pace || ''}
+                  onChange={(e) => handleEdit(zone.id, 'pace', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+                />
+                <input
+                  type="text"
+                  placeholder="Heart Rate Zone"
+                  value={editedZones[zone.id]?.heartRate || ''}
+                  onChange={(e) => handleEdit(zone.id, 'heartRate', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+                />
+                <input
+                  type="text"
+                  placeholder="Typical Duration"
+                  value={editedZones[zone.id]?.duration || ''}
+                  onChange={(e) => handleEdit(zone.id, 'duration', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

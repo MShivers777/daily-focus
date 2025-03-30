@@ -6,6 +6,7 @@ import BackIcon from '../../components/icons/BackIcon';
 import WorkoutTracker from '../../components/WorkoutTracker';
 import WorkoutPlanner from '../../components/WorkoutPlanner';
 import CardioZones from '../../components/CardioZones';
+import BodyMetrics from '../../components/BodyMetrics';
 
 export default function WorkoutsPage() {
   const router = useRouter();
@@ -100,9 +101,9 @@ export default function WorkoutsPage() {
           <div>Workouts content here</div>
         ) : activeTab === 'history' ? (
           <div>History content here</div>
-        ) : (
-          <div>Body Metrics content here</div>
-        )}
+        ) : activeTab === 'metrics' ? (
+          <BodyMetrics />
+        ) : null}
       </div>
     </div>
   );
