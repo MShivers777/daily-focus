@@ -4,9 +4,9 @@ export default function HydrationGuide({ isOpen, onClose, isSaving, error }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl max-w-4xl w-full m-4 shadow-xl">
-        <div className="text-center mb-8">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+      <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl max-w-md md:max-w-4xl w-full m-4 shadow-xl">
+        <div className="text-center mb-4 md:mb-8">
           <div className="flex justify-end">
             <button 
               onClick={onClose}
@@ -18,11 +18,11 @@ export default function HydrationGuide({ isOpen, onClose, isSaving, error }) {
               ✕
             </button>
           </div>
-          <div className={`mb-6 ${error ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-            <span className="text-4xl">
+          <div className={`mb-4 md:mb-6 ${error ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+            <span className="text-3xl md:text-4xl">
               {isSaving ? '⟳' : error ? '✕' : '✓'}
             </span>
-            <h2 className="text-2xl font-bold mt-2">
+            <h2 className="text-xl md:text-2xl font-bold mt-2">
               {isSaving ? (
                 <span className="inline-flex items-center">
                   Workout saving...
@@ -43,70 +43,70 @@ export default function HydrationGuide({ isOpen, onClose, isSaving, error }) {
               </p>
             )}
           </div>
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+          <h3 className="text-lg md:text-xl font-semibold text-gray-800 dark:text-white">
             Recommended Post-Workout Hydration
           </h3>
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs md:text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700">
-                <th className="p-2 text-left text-gray-600 dark:text-gray-300">Exercise Duration</th>
-                <th className="p-2 text-left text-gray-600 dark:text-gray-300">Condition</th>
-                <th className="p-2 text-left text-gray-600 dark:text-gray-300">Fluids (fl. oz)</th>
-                <th className="p-2 text-left text-gray-600 dark:text-gray-300">Table Salt (tsp)</th>
-                <th className="p-2 text-left text-gray-600 dark:text-gray-300">K (bananas)</th>
+                <th className="p-1 md:p-2 text-left text-gray-600 dark:text-gray-300">Exercise Duration</th>
+                <th className="p-1 md:p-2 text-left text-gray-600 dark:text-gray-300">Condition</th>
+                <th className="p-1 md:p-2 text-left text-gray-600 dark:text-gray-300">Fluids (fl. oz)</th>
+                <th className="p-1 md:p-2 text-left text-gray-600 dark:text-gray-300">Table Salt (tsp)</th>
+                <th className="p-1 md:p-2 text-left text-gray-600 dark:text-gray-300">K (bananas)</th>
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-gray-700">
               <tr>
-                <td className="p-2 text-gray-800 dark:text-gray-200">90 min zone 2</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">Outdoors, sunny, 93°F</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">51</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.75</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.8</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">90 min zone 2</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">Outdoors, sunny, 93°F</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">51</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.75</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.8</td>
               </tr>
               <tr>
-                <td className="p-2 text-gray-800 dark:text-gray-200">90 min zone 2</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">38</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.56</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.6</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">90 min zone 2</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">38</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.56</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.6</td>
               </tr>
               <tr>
-                <td className="p-2 text-gray-800 dark:text-gray-200">45 min zone 2</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">19</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.28</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.3</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">45 min zone 2</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">19</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.28</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.3</td>
               </tr>
               <tr>
-                <td className="p-2 text-gray-800 dark:text-gray-200">45 min HIIT</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">29</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.43</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.5</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">45 min HIIT</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">29</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.43</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.5</td>
               </tr>
               <tr>
-                <td className="p-2 text-gray-800 dark:text-gray-200">45 min tempo</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">24</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.35</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.4</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">45 min tempo</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">24</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.35</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.4</td>
               </tr>
               <tr>
-                <td className="p-2 text-gray-800 dark:text-gray-200">45 min Norwegian 4x4</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">34</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.50</td>
-                <td className="p-2 text-gray-800 dark:text-gray-200">0.5</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">45 min Norwegian 4x4</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">Indoors, 72°F</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">34</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.50</td>
+                <td className="p-1 md:p-2 text-gray-800 dark:text-gray-200">0.5</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 md:mt-4 text-xs md:text-sm text-gray-600 dark:text-gray-400">
           Note: Consume fluids and electrolytes gradually over 2-4 hours post-workout. 
           Bananas are listed as a reference for potassium content.
         </p>
