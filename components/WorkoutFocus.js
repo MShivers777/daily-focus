@@ -790,19 +790,23 @@ useEffect(() => {
 
       {/* Right Column */}
       <div className="space-y-6">
-        {/* Load Ratios Graph */}
+        {/* Load Ratios Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <LoadRatiosHeader />
-          <LoadRatiosGraph 
-            metrics={metrics} 
-            visibleLines={visibleLines} 
-            toggleLine={toggleLine} 
-            isGraphExpanded={isGraphExpanded}
-            setIsGraphExpanded={setIsGraphExpanded}
-          />
-          <LoadRatioDisplay metrics={metrics} />
+          <div className="space-y-2 mb-4">
+            {/* ...existing code... */}
+          </div>
+          <div 
+            onClick={() => setIsGraphExpanded(true)}
+            className="cursor-pointer transition-all hover:opacity-80"
+          >
+            <LoadRatiosGraph 
+              data={history.slice(-14)} // Use last 14 entries
+              visibleLines={visibleLines} 
+            />
+          </div>
         </div>
-
+        
         {/* Calendar */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <Calendar 
@@ -835,11 +839,15 @@ useEffect(() => {
       {/* Expanded Graph Modal */}
       {isGraphExpanded && (
         <ExpandedGraphModal 
-          metrics={metrics} 
-          visibleLines={visibleLines} 
-          toggleLine={toggleLine} 
-          onClose={() => setIsGraphExpanded(false)} 
-        />
+          isOpen={isGraphExpanded}
+          onClose={() => setIsGraphExpanded(false)}
+        >
+          <LoadRatiosGraph 
+            data={history.slice(-14)} // Keep consistent with small view
+            visibleLines={visibleLines}
+            expanded={true}
+          />
+        </ExpandedGraphModal>
       )}
 
       {/* Workout Details Modal */}

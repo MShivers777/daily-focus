@@ -3,6 +3,9 @@
 export default function ExpandedGraphModal({ isOpen, onClose, children }) {
   if (!isOpen) return null;
 
+  // Log to check if children are being passed
+  console.log('[ExpandedGraphModal] Rendering with children:', children);
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
@@ -25,7 +28,8 @@ export default function ExpandedGraphModal({ isOpen, onClose, children }) {
             Load Ratios
           </h2>
           
-          <div className="h-[70vh]">
+          {/* Add a border to the children container for visual debugging */}
+          <div className="h-[70vh]" style={{ border: '2px dashed limegreen' }}>
             {children}
           </div>
         </div>

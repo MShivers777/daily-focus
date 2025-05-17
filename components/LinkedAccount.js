@@ -52,31 +52,49 @@ export default function LinkedAccount() {
   const sendLinkRequest = async (e) => {
     e.preventDefault();
     try {
-      const { data: targetUser, error: userError } = await supabase
-        .from('auth.users')
-        .select('id')
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      // First check if the target user exists in auth.users
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id, user_id, email')
         .eq('email', linkEmail)
-        .single();
+        .maybeSingle();
 
-      if (userError || !targetUser) {
-        toast.error('User not found');
-        return;
-      }
+      if (existingUser?.user_id) {
+        // User exists, create a link request
+        const { error: linkError } = await supabase
+          .from('account_links')
+          .insert({
+            user_id: session.user.id,
+            linked_user_id: existingUser.user_id,
+            status: 'pending'
+          });
 
-      const { error: linkError } = await supabase
-        .from('account_links')
-        .insert({
-          user_id: (await supabase.auth.getSession()).data.session.user.id,
-          linked_user_id: targetUser.id
+        if (linkError) throw linkError;
+        toast.success('Link request sent!');
+      } else {
+        // User doesn't exist, send an invitation email
+        const { error: inviteError } = await supabase.auth.signInWithOtp({
+          email: linkEmail,
+          options: {
+            data: {
+              invited_by: session.user.id,
+              invitation_type: 'spouse_link'
+            }
+          }
         });
 
-      if (linkError) throw linkError;
+        if (inviteError) throw inviteError;
+        toast.success(`Invitation sent to ${linkEmail}`);
+      }
 
-      toast.success('Link request sent!');
       setLinkEmail('');
+      fetchLinkedAccount();
     } catch (error) {
       console.error('Error sending link request:', error);
-      toast.error('Failed to send link request');
+      toast.error(error.message || 'Failed to send link request');
     }
   };
 

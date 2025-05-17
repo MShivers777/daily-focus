@@ -1,70 +1,49 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '../api/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import AuthComponent from '../components/Auth';
 import ErrorMessage from '../components/ErrorMessage';
+import { getRandomVerse } from '../utils/bibleVerses';
 
 export default function Home() {
-  const router = useRouter();
   const [session, setSession] = useState(null);
-  const [userName, setUserName] = useState('');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [marriagePrompt, setMarriagePrompt] = useState('');
-  const [errors, setErrors] = useState({
-    marriagePrompt: null,
-    session: null
-  });
-
-  const handleSignInWithGoogle = async (response) => {
-    const { data, error } = await supabase.auth.signInWithIdToken({
-      provider: 'google',
-      token: response.credential,
-    });
-
-    if (error) {
-      console.error('Sign in error:', error);
-    } else {
-      console.log('Signed in user:', data);
-    }
-  };
+  const [dailyQuote, setDailyQuote] = useState({ text: '', author: '' });
+  const [errors, setErrors] = useState({});
+  const supabase = createClientComponentClient();
+  const router = useRouter();
 
   useEffect(() => {
-    let mounted = true;
-
-    async function getInitialSession() {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        if (mounted) {
-          setSession(session);
-        }
-      } catch (error) {
-        console.error('Session error:', error);
-        setErrors(prev => ({ ...prev, session: 'Failed to load session. Please sign out and try again.' }));
+    const fetchSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error fetching session:', error);
+        setLoading(false);
+        return;
       }
-    }
+      setSession(session);
+      setLoading(false);
+    };
 
-    getInitialSession();
+    fetchSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setSession(session);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
     });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase, router]);
 
-  // Only fetch data if we have a session
   useEffect(() => {
     if (session) {
       fetchUserName();
-      fetchDailyMarriagePrompt();
+      fetchMarriagePrompt(session);
+      fetchDailyQuote();
     }
   }, [session]);
 
@@ -81,56 +60,113 @@ export default function Home() {
                    session.user.email?.split('@')[0] ||
                    'Friend';
       
-      setUserName(name);
+      setUser(name);
     } catch (error) {
       console.error('Error fetching user name:', error);
     }
   };
 
-  const fetchDailyMarriagePrompt = async () => {
+  const fetchMarriagePrompt = async (currentSession) => {
+    if (!currentSession) return;
+
     try {
       const today = new Date();
       const dayOfWeek = today.getDay();
-      const weekNumber = Math.floor((today.getDate() - 1) / 7) % 2 + 1;
+      const weekOfMonth = Math.floor((today.getDate() - 1) / 7);
+      const weekNumberForTemplate = (weekOfMonth % 2) + 1;
 
-      // Get scheduled topic
-      const { data: scheduleData } = await supabase
+      const { data: scheduleData, error: scheduleError } = await supabase
         .from('marriage_schedule_template')
         .select('topic_id, marriage_topics(identifier, name)')
         .eq('day_of_week', dayOfWeek)
-        .eq('week_number', weekNumber)
+        .eq('week_number', weekNumberForTemplate)
         .single();
 
-      if (!scheduleData) return;
+      if (scheduleError || !scheduleData) {
+        console.error('Home Page: Error fetching schedule or no schedule for today:', scheduleError);
+        setMarriagePrompt('No marriage focus scheduled for today.');
+        return;
+      }
 
-      // Get or create user progress
+      const topicId = scheduleData.topic_id;
+
       const { data: progress } = await supabase
         .from('user_prompt_progress')
         .select('last_prompt_number')
-        .eq('user_id', session.user.id)
-        .eq('topic_id', scheduleData.topic_id)
-        .single();
+        .eq('user_id', currentSession.user.id)
+        .eq('topic_id', topicId)
+        .single(); // Errors if no row, caught by outer try/catch
 
-      const currentPromptNumber = (progress?.last_prompt_number || 0) + 1;
+      let lastPromptNum = progress?.last_prompt_number || 0;
+      let sequenceToFetch = lastPromptNum + 1;
 
-      // Get prompt
-      const { data: promptData } = await supabase
+      let { data: promptData, error: fetchError } = await supabase
         .from('marriage_prompts')
-        .select('content')
-        .eq('topic_id', scheduleData.topic_id)
-        .eq('sequence_number', currentPromptNumber)
+        .select('content, sequence_number') // Ensure sequence_number is selected
+        .eq('topic_id', topicId)
+        .eq('sequence_number', sequenceToFetch)
         .single();
+
+      if (!promptData || (fetchError && fetchError.code === 'PGRST116')) {
+        sequenceToFetch = 1; // Reset to fetch the first prompt
+        const { data: firstPromptData, error: firstFetchError } = await supabase
+          .from('marriage_prompts')
+          .select('content, sequence_number') // Ensure sequence_number is selected
+          .eq('topic_id', topicId)
+          .eq('sequence_number', sequenceToFetch)
+          .single();
+        
+        if (firstFetchError && firstFetchError.code !== 'PGRST116') {
+          console.error('Home Page: Error fetching first prompt for topic:', topicId, firstFetchError);
+        }
+        promptData = firstPromptData;
+      } else if (fetchError) {
+        console.error('Home Page: Error fetching prompt:', topicId, sequenceToFetch, fetchError);
+      }
 
       if (promptData) {
+        await supabase
+          .from('user_prompt_progress')
+          .upsert({
+            user_id: currentSession.user.id,
+            topic_id: topicId,
+            last_prompt_number: promptData.sequence_number // Update with the displayed prompt's number
+          });
         setMarriagePrompt(`${scheduleData.marriage_topics.name}: ${promptData.content}`);
       } else {
-        setMarriagePrompt('No prompt available for today');
+        setMarriagePrompt(`${scheduleData.marriage_topics.name}: No prompts available for this topic.`);
       }
     } catch (error) {
-      console.error('Error fetching marriage prompt:', error);
-      setMarriagePrompt('Unable to load today\'s marriage focus');
+      // Catch errors from .single() if no record, or other general errors
+      if (error.code === 'PGRST116') {
+         console.warn('Home Page: A fetch operation returned no data (PGRST116), prompt may be unavailable:', error.message);
+      } else {
+        console.error('Home Page: Error fetching marriage prompt:', error);
+      }
+      setMarriagePrompt('Unable to load today\'s marriage focus.');
+      setErrors(prev => ({...prev, marriagePrompt: 'Could not load marriage prompt.'}));
     }
   };
+
+  const fetchDailyQuote = async () => {
+    try {
+      const verse = getRandomVerse();
+      setDailyQuote({
+        text: verse.text,
+        author: verse.reference
+      });
+    } catch (error) {
+      console.error('Error getting Bible verse:', error);
+      setDailyQuote({
+        text: 'Love is patient, love is kind.',
+        author: '1 Corinthians 13:4'
+      });
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   if (!session) {
     return <AuthComponent />;
@@ -157,7 +193,7 @@ export default function Home() {
           <div className="flex justify-between items-center mb-8 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
             <div>
               <p className="text-gray-600 dark:text-gray-400 mb-1">
-                Welcome, {userName}
+                Welcome, {user}
               </p>
               <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Daily Focus Tracker</h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">{dateString}</p>
@@ -192,9 +228,20 @@ export default function Home() {
             {errors.marriagePrompt ? (
               <ErrorMessage message={errors.marriagePrompt} />
             ) : (
-              <p className="text-gray-700 dark:text-gray-300 italic bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                {marriagePrompt || 'Loading...'}
-              </p>
+              <div className="space-y-6">
+                <p className="text-gray-700 dark:text-gray-300 italic bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                  {marriagePrompt || 'Loading...'}
+                </p>
+                
+                <div className="border-t dark:border-gray-700 pt-4">
+                  <blockquote className="italic text-gray-600 dark:text-gray-400">
+                    "{dailyQuote.text}"
+                    <footer className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-500">
+                      — {dailyQuote.author}
+                    </footer>
+                  </blockquote>
+                </div>
+              </div>
             )}
           </div>
         </div>
