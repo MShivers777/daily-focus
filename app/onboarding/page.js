@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import supabase from '../../api/supabase';
-import ScheduleForm from '../../../components/workout-onboarding/ScheduleForm'; // Ensure this is correct
+import ScheduleForm from '../../components/workout-onboarding/ScheduleForm'; // Ensure this is correct
 
 export default function OnboardingPage() {
   const router = useRouter();
