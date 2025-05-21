@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '../../api/supabase';
-import ScheduleForm from '../../components/workout-onboarding/ScheduleForm'; // Ensure this is correct
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import ErrorMessage from '../../components/ErrorMessage';
 
 export default function OnboardingPage() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
   const [goals, setGoals] = useState([]);
   const [pace, setPace] = useState('maintain');

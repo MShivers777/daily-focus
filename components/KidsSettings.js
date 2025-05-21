@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
-import supabase from '../api/supabase';  // Use shared instance
+import ErrorMessage from './ErrorMessage';
 
-export default function KidsSettings() {
+const KidsSettings = ({ userId }) => {
+  const supabase = createClientComponentClient();
   const [hasKids, setHasKids] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -129,3 +131,5 @@ export default function KidsSettings() {
     </div>
   );
 }
+
+export default KidsSettings;

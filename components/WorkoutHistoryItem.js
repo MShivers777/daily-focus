@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
-import supabase from '../api/supabase';
 
-export default function WorkoutHistoryItem({ entry, onUpdate }) {
+const WorkoutHistoryItem = ({ entry, onUpdate }) => {
+  const supabase = createClientComponentClient();
   const [showActions, setShowActions] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
@@ -109,3 +110,5 @@ export default function WorkoutHistoryItem({ entry, onUpdate }) {
     </div>
   );
 }
+
+export default WorkoutHistoryItem;

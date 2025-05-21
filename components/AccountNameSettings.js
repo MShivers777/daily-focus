@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
-import supabase from '../api/supabase';
+import ErrorMessage from './ErrorMessage';
 
-export default function AccountNameSettings() {
+const AccountNameSettings = ({ userId }) => {
+  const supabase = createClientComponentClient();
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [originalName, setOriginalName] = useState('');
@@ -162,3 +164,5 @@ export default function AccountNameSettings() {
     </div>
   );
 }
+
+export default AccountNameSettings;

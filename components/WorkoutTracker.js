@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
-import supabase from '../api/supabase';
+import HydrationGuide from './HydrationGuide';
 import LoadRatiosGraph from './LoadRatiosGraph';
 import LoadRatioDisplay from './LoadRatioDisplay';
 import LoadRatiosHeader from './LoadRatiosHeader';
 import ErrorMessage from './ErrorMessage';
 import WorkoutConfirmation from './WorkoutConfirmation';
-import HydrationGuide from './HydrationGuide';
 import WorkoutHistoryItem from './WorkoutHistoryItem';
 import { useRouter } from 'next/navigation';
 import { calculateLoads, previewWorkoutLoads, validateLoads } from '../utils/loadCalculations';
@@ -53,6 +53,7 @@ const CARDIO_WORKOUT_TYPES = [
 ];
 
 export default function WorkoutTracker() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
   const [workoutDate, setWorkoutDate] = useState(() => {
     // Get today's date in YYYY-MM-DD format in local timezone

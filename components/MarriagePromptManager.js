@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import supabase from '../api/supabase';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-export default function MarriagePromptManager() {
+const MarriagePromptManager = ({ userId }) => {
+  const supabase = createClientComponentClient();
   const [currentPrompt, setCurrentPrompt] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -155,3 +156,5 @@ export default function MarriagePromptManager() {
     </div>
   );
 }
+
+export default MarriagePromptManager;

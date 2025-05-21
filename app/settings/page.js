@@ -1,15 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '../../api/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import BackIcon from '../../components/icons/BackIcon';
 import AccountNameSettings from '../../components/AccountNameSettings';
 import KidsSettings from '../../components/KidsSettings';
 
 export default function SettingsPage() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+      } else if (error) {
+        console.error("Error fetching user session:", error);
+      }
+      setLoading(false);
+    };
+    fetchUser();
+  }, [supabase]);
 
   const handleRedoOnboarding = async () => {
     try {
@@ -34,6 +50,15 @@ export default function SettingsPage() {
     }
   };
 
+  if (loading) {
+    return <div>Loading settings...</div>;
+  }
+
+  if (!user) {
+    // This case should ideally be handled by middleware redirecting to login
+    return <div>Please log in to view settings.</div>;
+  }
+
   return (
     <div className="relative">
       <button
@@ -53,7 +78,7 @@ export default function SettingsPage() {
               <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
                 Account Name
               </h2>
-              <AccountNameSettings />
+              <AccountNameSettings userId={user.id} />
             </div>
 
             {/* Kids Setting Section */}
@@ -64,7 +89,7 @@ export default function SettingsPage() {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 This helps us customize relationship prompts for your family situation
               </p>
-              <KidsSettings />
+              <KidsSettings userId={user.id} />
             </div>
 
             {/* Marriage Focus Section */}

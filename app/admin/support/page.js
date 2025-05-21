@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '../../../api/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import BackIcon from '../../../components/icons/BackIcon';
 
 export default function SupportMessagesPage() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -1,15 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
-import supabase from '../api/supabase';
+import React, { useState, useEffect, useCallback } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import ErrorMessage from './ErrorMessage';
+import WorkoutForm from './WorkoutForm';
 import WorkoutList from './WorkoutList';
 import WorkoutPlanForm from './WorkoutPlanForm';
-import ErrorMessage from './ErrorMessage';
 import CalendarView from './CalendarView';
 import { useRouter } from 'next/navigation';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function WorkoutPlanner() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
   const [view, setView] = useState('list');
   const [showPlanForm, setShowPlanForm] = useState(false);
@@ -18,7 +20,6 @@ export default function WorkoutPlanner() {
   const [isLoading, setIsLoading] = useState(true);
   const [history, setHistory] = useState([]);
   const [workoutSettings, setWorkoutSettings] = useState(null);
-  const [scheduledWorkouts, setScheduledWorkouts] = useState([]);
 
   useEffect(() => {
     loadPlannedWorkouts();

@@ -1,6 +1,7 @@
-import supabase from '../api/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export async function createPlannedWorkout(data) {
+  const supabase = createClientComponentClient();
   const { data: result, error } = await supabase
     .from('planned_workouts')
     .insert([data])
@@ -12,6 +13,7 @@ export async function createPlannedWorkout(data) {
 }
 
 export async function getPlannedWorkouts(startDate = null, endDate = null) {
+  const supabase = createClientComponentClient();
   let query = supabase
     .from('planned_workouts')
     .select('*')
@@ -30,6 +32,7 @@ export async function getPlannedWorkouts(startDate = null, endDate = null) {
 }
 
 export async function updatePlannedWorkout(id, data) {
+  const supabase = createClientComponentClient();
   const { data: result, error } = await supabase
     .from('planned_workouts')
     .update(data)
@@ -42,6 +45,7 @@ export async function updatePlannedWorkout(id, data) {
 }
 
 export async function deletePlannedWorkout(id) {
+  const supabase = createClientComponentClient();
   const { error } = await supabase
     .from('planned_workouts')
     .delete()

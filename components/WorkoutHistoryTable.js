@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import supabase from '../api/supabase';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import ErrorMessage from './ErrorMessage';
 import { calculateLoads } from '../utils/loadCalculations';
 
 const COLUMNS = [
@@ -18,8 +19,9 @@ const COLUMNS = [
   { key: 'note', label: 'Notes' }
 ];
 
-export default function WorkoutHistoryTable() {
-  const [history, setHistory] = useState([]);
+const WorkoutHistoryTable = ({ userId }) => {
+  const supabase = createClientComponentClient();
+  const [workouts, setWorkouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState({ key: 'workout_date', direction: 'desc' });
 
@@ -42,7 +44,7 @@ export default function WorkoutHistoryTable() {
       
       // Calculate loads for all workouts
       const workoutsWithLoads = calculateLoads(data || []);
-      setHistory(workoutsWithLoads);
+      setWorkouts(workoutsWithLoads);
     } catch (error) {
       console.error('Error loading workout history:', error);
     } finally {
@@ -60,7 +62,7 @@ export default function WorkoutHistoryTable() {
     });
   };
 
-  const sortedHistory = [...history].sort((a, b) => {
+  const sortedHistory = [...workouts].sort((a, b) => {
     if (a[sortConfig.key] < b[sortConfig.key]) {
       return sortConfig.direction === 'asc' ? -1 : 1;
     }
@@ -181,8 +183,4 @@ export default function WorkoutHistoryTable() {
 
 function getRatioColor(ratio) {
   if (!ratio) return 'text-gray-600 dark:text-gray-300';
-  if (ratio < 0.8) return 'text-blue-600 dark:text-blue-400';
-  if (ratio <= 1.3) return 'text-green-600 dark:text-green-400';
-  if (ratio <= 1.5) return 'text-yellow-600 dark:text-yellow-400';
-  return 'text-red-600 dark:text-red-400';
-}
+  if

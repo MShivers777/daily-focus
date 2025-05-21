@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import supabase from '../api/supabase';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
 
 const WORKOUT_TYPES = [
@@ -13,7 +13,8 @@ const WORKOUT_TYPES = [
   { id: 'hill_sprints', title: 'Hill Sprints', description: 'High-intensity uphill efforts' }
 ];
 
-export default function CardioZones() {
+const CardioZones = ({ userId }) => {
+  const supabase = createClientComponentClient();
   const [zones, setZones] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [editedZones, setEditedZones] = useState({});
@@ -165,3 +166,5 @@ export default function CardioZones() {
     </div>
   );
 }
+
+export default CardioZones;

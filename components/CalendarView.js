@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import supabase from '../api/supabase';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import WorkoutPlanForm from './WorkoutPlanForm';
+
+const supabase = createClientComponentClient();
 
 export default function CalendarView({ workoutHistory = [], plannedWorkouts = [], onAddWorkout }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());

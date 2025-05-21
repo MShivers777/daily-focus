@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '../../../api/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import ErrorMessage from '../../../components/ErrorMessage';
 import BackIcon from '../../../components/icons/BackIcon';
 import GoalsForm from '../../../components/workout-onboarding/GoalsForm';
 import ExperienceForm from '../../../components/workout-onboarding/ExperienceForm';
@@ -14,6 +15,7 @@ import { default as ReviewFormComponent } from '../../../components/workout-onbo
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export default function WorkoutOnboarding() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({

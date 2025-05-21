@@ -1,53 +1,52 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import supabase from '../../../api/supabase';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function AuthCallback() {
+  const supabase = createClientComponentClient();
   const router = useRouter();
-  const [error, setError] = useState(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const handleAuth = async () => {
-      try {
-        const { searchParams } = new URL(window.location.href);
-        const code = searchParams.get('code');
+    const handleAuthCallback = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
+      if (sessionError) {
+        console.error('Error getting session in callback:', sessionError);
+        router.push(`/login?error=${encodeURIComponent(sessionError.message || 'callback_failed')}`);
+        return;
+      }
+
+      if (session) {
+        router.push('/'); // Redirect to home or dashboard
+      } else {
+        // Check for error parameters from Supabase redirect
+        const error_description = searchParams.get('error_description');
+        const error = searchParams.get('error');
+
+        if (error_description) {
+          console.error('OAuth Error:', error_description);
+          router.push(`/login?error=${encodeURIComponent(error_description)}`);
+        } else if (error) {
+          console.error('OAuth Error Code:', error);
+          router.push(`/login?error=${encodeURIComponent(error)}`);
         }
-        // Redirect to home page
-        window.location.href = '/';
-      } catch (error) {
-        console.error('Auth error:', error);
-        setError(error.message);
-        // Wait a bit before redirecting on error
-        setTimeout(() => {
-          router.push('/auth/error');
-        }, 2000);
+         else {
+          // This case might occur if the redirect happened without establishing a session
+          // and without explicit error parameters.
+          console.warn('No session and no explicit error in callback. Redirecting to login.');
+          router.push('/login?error=auth_failed_no_session');
+        }
       }
     };
 
-    handleAuth();
-  }, [router]);
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-4">Authentication failed: {error}</p>
-          <p>Redirecting to error page...</p>
-        </div>
-      </div>
-    );
-  }
+    handleAuthCallback();
+  }, [supabase, router, searchParams]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-gray-600 dark:text-gray-400">Processing authentication...</p>
-      </div>
+    <div>
+      <p>Processing authentication...</p>
     </div>
   );
 }

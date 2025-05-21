@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
-import supabase from '../api/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import ErrorMessage from './ErrorMessage';
 import toast from 'react-hot-toast';
 
-export default function BodyMetrics() {
+const BodyMetrics = ({ userId }) => {
+  const supabase = createClientComponentClient();
   const [weight, setWeight] = useState('');
   const [weightHistory, setWeightHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -136,3 +138,5 @@ export default function BodyMetrics() {
     </div>
   );
 }
+
+export default BodyMetrics;

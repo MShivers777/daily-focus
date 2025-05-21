@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import supabase from '../api/supabase';
+import React, { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-export default function MarriageSchedule() {
+const MarriageSchedule = ({ userId }) => {
+  const supabase = createClientComponentClient();
   const [schedule, setSchedule] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -159,3 +160,5 @@ export default function MarriageSchedule() {
     </div>
   );
 }
+
+export default MarriageSchedule;

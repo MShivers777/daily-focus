@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import supabase from '../api/supabase';
+import React, { useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
 
-export default function ContactForm({ isOpen, onClose }) {
+const ContactForm = ({ isOpen, onClose }) => {
+  const supabase = createClientComponentClient();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
 
@@ -88,3 +89,5 @@ export default function ContactForm({ isOpen, onClose }) {
     </div>
   );
 }
+
+export default ContactForm;

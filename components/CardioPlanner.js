@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
-import supabase from '../api/supabase';
 
 const WORKOUT_TYPES = [
   { id: 'intervals', label: 'Intervals' },
@@ -14,7 +14,8 @@ const WORKOUT_TYPES = [
   { id: 'custom', label: 'Custom' }
 ];
 
-export default function CardioPlanner() {
+const CardioPlanner = ({ userId }) => {
+  const supabase = createClientComponentClient();
   const [workoutData, setWorkoutData] = useState({
     type: '',
     customType: '',
@@ -237,4 +238,6 @@ export default function CardioPlanner() {
       </button>
     </form>
   );
-}
+};
+
+export default CardioPlanner;
