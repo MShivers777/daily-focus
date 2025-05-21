@@ -182,5 +182,14 @@ const WorkoutHistoryTable = ({ userId }) => {
 }
 
 function getRatioColor(ratio) {
-  if (!ratio) return 'text-gray-600 dark:text-gray-300';
-  if
+  if (ratio === null || typeof ratio === 'undefined') return 'text-gray-600 dark:text-gray-300';
+  if (ratio < 0.5) {
+    return 'text-red-500 dark:text-red-400'; // Color for low ratios (e.g., < 50%)
+  } else if (ratio < 0.75) {
+    return 'text-yellow-500 dark:text-yellow-400'; // Color for medium ratios (e.g., < 75%)
+  } else {
+    return 'text-green-500 dark:text-green-400'; // Color for high ratios (e.g., >= 75%)
+  }
+}
+
+export default WorkoutHistoryTable;
