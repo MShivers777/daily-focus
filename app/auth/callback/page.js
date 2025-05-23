@@ -1,12 +1,13 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react'; // Import Suspense
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-export default function AuthCallback() {
+// Renamed original component to AuthCallbackContent
+function AuthCallbackContent() {
   const supabase = createClientComponentClient();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // This hook requires Suspense
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -48,5 +49,14 @@ export default function AuthCallback() {
     <div>
       <p>Processing authentication...</p>
     </div>
+  );
+}
+
+// New default export for the page, wrapping AuthCallbackContent in Suspense
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<div>Loading authentication details...</div>}>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
