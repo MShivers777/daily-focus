@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useCallback, useMemo
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
 import ErrorMessage from './ErrorMessage';
@@ -116,28 +116,75 @@ export default function WorkoutTracker() {
 
   // Add this effect to update preview loads when form changes
   useEffect(() => {
-    if (strengthVolume || cardioLoad) {
+    if (!strengthVolume && !cardioLoad) {
+      setPreviewLoads(null);
+      return;
+    }
+
+    const handler = setTimeout(() => {
       const previewWorkout = {
         workout_date: workoutDate,
         strength_volume: parseInt(strengthVolume) || 0,
         cardio_load: parseInt(cardioLoad) || 0,
         note: note
       };
-      // Get actual deload frequency from settings or use default
       const preview = previewWorkoutLoads(
         history,
         previewWorkout
       );
       setPreviewLoads(preview);
-    } else {
-      setPreviewLoads(null);
+    }, 500); // Debounce by 500ms
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [workoutDate, strengthVolume, cardioLoad, note, history]); // Added note to dependencies
+
+  // Helper function to get workouts for a specific day - consolidated version
+  const getWorkoutsForDay = useCallback((dayIndex, settings) => {
+    try {
+      const selectedWorkouts = settings?.selected_workouts || [];
+      const dayName = DAYS[dayIndex].toLowerCase();
+
+      // Filter workouts for the specific day
+      const dayWorkouts = selectedWorkouts.filter(workout => workout.day === dayName);
+
+      // REMOVED DEBUG LOG: console.log(`Getting workouts for day ${dayIndex} (${dayName}):`, dayWorkouts);
+
+      return dayWorkouts;
+    } catch (error) {
+      console.error(`Error getting workouts for day ${dayIndex}:`, error);
+      return [];
     }
-  }, [workoutDate, strengthVolume, cardioLoad, history]);
+  }, []); // DAYS is a constant from outer scope
+
+  // Update getScheduledWorkouts to use the consolidated getWorkoutsForDay
+  const memoizedGetScheduledWorkouts = useCallback(() => {
+    const workouts = [];
+    if (!workoutSettings) return workouts;
+
+    DAYS.forEach((_, dayIndex) => {
+      const dayWorkouts = getWorkoutsForDay(dayIndex, workoutSettings);
+      dayWorkouts.forEach(workout => {
+        const date = new Date(planStartDate);
+        date.setDate(date.getDate() + dayIndex);
+        workouts.push({
+          date: new Date(date), // Ensure it's a Date object
+          type: workout.type,
+          subtype: workout.subtype || null,
+          duration: workout.duration || workoutSettings.workout_duration,
+          planned: true,
+        });
+      });
+    });
+
+    return workouts;
+  }, [workoutSettings, planStartDate, getWorkoutsForDay]); // getWorkoutsForDay is stable
 
   // Add this effect to update the scheduled workouts when plan start date changes
   useEffect(() => {
-    setScheduledWorkouts(getScheduledWorkouts());
-  }, [planStartDate, workoutSettings, history]);
+    setScheduledWorkouts(memoizedGetScheduledWorkouts());
+  }, [memoizedGetScheduledWorkouts]); // Dependency is the memoized function itself
 
   // Copy all the workout-related functions from the dashboard
   const fetchHistory = async () => {
@@ -503,51 +550,11 @@ const calculateProgressiveLoads = (baseLoads, totalWeeks = 16) => {
   return loads;
 };
 
-// Helper function to get workouts for a specific day - consolidated version
-const getWorkoutsForDay = (dayIndex, settings) => {
-  try {
-    const selectedWorkouts = settings?.selected_workouts || [];
-    const dayName = DAYS[dayIndex].toLowerCase();
+// REMOVED getWorkoutsForDay from here as it's defined above with useCallback
 
-    // Filter workouts for the specific day
-    const dayWorkouts = selectedWorkouts.filter(workout => workout.day === dayName);
+// REMOVED getScheduledWorkouts from here as it's defined above with useCallback (memoizedGetScheduledWorkouts)
 
-    // Debug log
-    console.log(`Getting workouts for day ${dayIndex} (${dayName}):`, dayWorkouts);
-
-    return dayWorkouts;
-  } catch (error) {
-    console.error(`Error getting workouts for day ${dayIndex}:`, error);
-    return [];
-  }
-};
-
-// Update getScheduledWorkouts to use the consolidated getWorkoutsForDay
-const getScheduledWorkouts = () => {
-  const workouts = [];
-  if (!workoutSettings) return workouts;
-
-  DAYS.forEach((_, dayIndex) => {
-    const dayWorkouts = getWorkoutsForDay(dayIndex, workoutSettings);
-    dayWorkouts.forEach(workout => {
-      const date = new Date(planStartDate);
-      date.setDate(date.getDate() + dayIndex);
-      workouts.push({
-        date: new Date(date), // Ensure it's a Date object
-        type: workout.type,
-        subtype: workout.subtype || null,
-        duration: workout.duration || workoutSettings.workout_duration,
-        planned: true,
-      });
-    });
-  });
-
-  return workouts;
-};
-
-useEffect(() => {
-  setScheduledWorkouts(getScheduledWorkouts());
-}, [workoutSettings, planStartDate]);
+// REMOVED useEffect for scheduledWorkouts as it's defined above
 
   const cycleWorkoutType = (current, subtype) => {
     if (!current) return { type: 'Strength', subtype: null };
@@ -611,6 +618,15 @@ useEffect(() => {
     setIsModalOpen(false); // Close the modal
     setSelectedWorkoutsForModal([]);
   };
+
+  const calendarWorkouts = useMemo(() => {
+    return scheduledWorkouts.concat(
+      history.map(entry => ({
+        ...entry,
+        date: new Date(entry.workout_date),
+      }))
+    );
+  }, [scheduledWorkouts, history]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -804,7 +820,7 @@ useEffect(() => {
           <Calendar 
             selectedDate={selectedDate} 
             onDateSelect={handleDateSelect} 
-            scheduledWorkouts={scheduledWorkouts}
+            scheduledWorkouts={calendarWorkouts} // Use memoized prop
             onDoubleClickWorkout={handleDoubleClickWorkout}
           />
         </div>

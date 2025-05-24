@@ -521,9 +521,6 @@ const getWorkoutsForDay = (dayIndex, settings) => {
     // Filter workouts for the specific day
     const dayWorkouts = selectedWorkouts.filter(workout => workout.day === dayName);
 
-    // Debug log
-    console.log(`Getting workouts for day ${dayIndex} (${dayName}):`, dayWorkouts);
-
     return dayWorkouts;
   } catch (error) {
     console.error(`Error getting workouts for day ${dayIndex}:`, error);
