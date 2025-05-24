@@ -92,6 +92,8 @@ const MarriagePromptManager = ({ userId }) => {
             user_id: session.user.id,
             topic_id: topicId,
             last_prompt_number: promptData.sequence_number
+          }, {
+            onConflict: 'user_id,topic_id' // Specify conflict columns
           });
 
         setCurrentPrompt({

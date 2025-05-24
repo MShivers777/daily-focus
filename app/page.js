@@ -131,6 +131,8 @@ export default function Home() {
             user_id: currentSession.user.id,
             topic_id: topicId,
             last_prompt_number: promptData.sequence_number // Update with the displayed prompt's number
+          }, {
+            onConflict: 'user_id,topic_id' // Specify conflict columns
           });
         setMarriagePrompt(`${scheduleData.marriage_topics.name}: ${promptData.content}`);
       } else {

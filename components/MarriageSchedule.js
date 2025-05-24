@@ -102,6 +102,8 @@ const MarriageSchedule = ({ userId }) => {
                     user_id: session.user.id,
                     topic_id: topicId,
                     last_prompt_number: nextPromptNumber
+                  }, {
+                    onConflict: 'user_id,topic_id' // Specify conflict columns
                   });
               }
 
