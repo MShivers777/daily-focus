@@ -12,7 +12,14 @@ export default function AuthComponent() {
     setLoading(true);
     setError(null);
     try {
+      // Ensure window.location.origin is available for redirectTo
+      if (typeof window === 'undefined' || !window.location || !window.location.origin) {
+        // This case should ideally not happen in a client component context
+        console.error('Cannot determine redirect origin: window.location.origin is not available.');
+        throw new Error('Cannot determine redirect origin.');
+      }
       const redirectTo = `${window.location.origin}/auth/callback`;
+
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -21,12 +28,17 @@ export default function AuthComponent() {
       });
 
       if (signInError) {
-        throw signInError;
+        console.error('Supabase sign-in error details:', signInError);
+        throw signInError; // Rethrow to be caught by the catch block
       }
-      // User will be redirected to Google, then back to /auth/callback
-      // No need to setLoading(false) here if redirect happens.
+      // If signInError is null, Supabase handles the redirect.
+      // setLoading(false) is not strictly needed here if a redirect occurs,
+      // as the component instance might be replaced.
     } catch (err) {
-      setError(err.message || 'Could not sign in with Google.');
+      console.error('Google Sign-In failed:', err);
+      // Attempt to provide a more specific error message.
+      const message = err.message || (typeof err === 'string' ? err : 'An unexpected error occurred. Please try again.');
+      setError(`Could not sign in with Google: ${message}`);
       setLoading(false);
     }
   };
