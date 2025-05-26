@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Import React
 import { getWorkoutTypeLabel } from '../utils/workoutSchedules';
 
 function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWorkout }) {
@@ -229,4 +229,4 @@ function Calendar({ workouts = [], selectedDate, onSelectDate, onDoubleClickWork
   );
 }
 
-export default Calendar;
+export default React.memo(Calendar); // Wrap with React.memo

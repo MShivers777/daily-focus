@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Import React
 import { parseISO, format, subDays, subMonths } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea } from 'recharts';
 
@@ -200,4 +200,4 @@ const LoadRatiosGraph = ({ data, visibleLines, className = '', expanded = false 
   );
 };
 
-export default LoadRatiosGraph;
+export default React.memo(LoadRatiosGraph); // Wrap with React.memo

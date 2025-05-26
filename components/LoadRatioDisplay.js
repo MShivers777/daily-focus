@@ -1,6 +1,7 @@
 'use client';
+import React from 'react'; // Import React
 
-export default function LoadRatioDisplay({ label, value, isVisible, color, onClick }) {
+function LoadRatioDisplay({ label, value, isVisible, color, onClick }) {
   const getValueColor = (val) => {
     if (!isVisible) return 'text-gray-400 dark:text-gray-500';
     if (val < 0.8) return 'text-yellow-500 dark:text-yellow-400';
@@ -22,3 +23,5 @@ export default function LoadRatioDisplay({ label, value, isVisible, color, onCli
     </button>
   );
 }
+
+export default React.memo(LoadRatioDisplay); // Wrap with React.memo

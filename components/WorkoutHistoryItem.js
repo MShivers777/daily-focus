@@ -111,4 +111,4 @@ const WorkoutHistoryItem = ({ entry, onUpdate }) => {
   );
 }
 
-export default WorkoutHistoryItem;
+export default React.memo(WorkoutHistoryItem);

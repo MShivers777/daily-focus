@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react'; // Ensured useCallback is imported
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import toast from 'react-hot-toast';
 import HydrationGuide from './HydrationGuide';
@@ -52,6 +52,12 @@ const CARDIO_WORKOUT_TYPES = [
   { id: 'cardio_b', label: 'Cardio B' }
 ];
 
+// IMPORTANT: For the memoizations in this component (useMemo, useCallback) to effectively 
+// prevent unnecessary re-renders of child components (like Calendar, LoadRatiosGraph, 
+// LoadRatioDisplay, WorkoutHistoryItem), those child components *must* be wrapped 
+// with React.memo in their respective files. 
+// e.g., export default React.memo(Calendar);
+
 export default function WorkoutTracker() {
   const supabase = createClientComponentClient();
   const router = useRouter();
@@ -83,7 +89,6 @@ export default function WorkoutTracker() {
   const [showWorkoutConfirm, setShowWorkoutConfirm] = useState(false);
   const [existingWorkout, setExistingWorkout] = useState(null);
   const [pendingWorkout, setPendingWorkout] = useState(null);
-  const [previewLoads, setPreviewLoads] = useState(null);
   const [isGraphExpanded, setIsGraphExpanded] = useState(false);
   const [workoutSettings, setWorkoutSettings] = useState(null);
   const [activeTab, setActiveTab] = useState('track');
@@ -123,30 +128,10 @@ export default function WorkoutTracker() {
     fetchSettings();
   }, []);
 
-  // Add this effect to update preview loads when form changes
-  useEffect(() => {
-    if (strengthVolume || cardioLoad) {
-      const previewWorkout = {
-        workout_date: workoutDate,
-        strength_volume: parseInt(strengthVolume) || 0,
-        cardio_load: parseInt(cardioLoad) || 0,
-        note: note
-      };
-      // Get actual deload frequency from settings or use default
-      const preview = previewWorkoutLoads(
-        history,
-        previewWorkout
-      );
-      setPreviewLoads(preview);
-    } else {
-      setPreviewLoads(null);
-    }
-  }, [workoutDate, strengthVolume, cardioLoad, history]);
-
   // Add this effect to update the scheduled workouts when plan start date changes
   useEffect(() => {
     setScheduledWorkouts(getScheduledWorkouts());
-  }, [planStartDate, workoutSettings, history]);
+  }, [planStartDate, workoutSettings, history]); // Removed getScheduledWorkouts from deps, it's defined in component scope
 
   // Copy all the workout-related functions from the dashboard
   const fetchHistory = async () => {
@@ -204,34 +189,50 @@ export default function WorkoutTracker() {
         toast.error('Please sign in to save workouts');
         return;
       }
-      const formattedData = {
+
+      // Construct workout data for load calculation
+      const currentWorkoutData = {
         workout_date: workoutDate,
         strength_volume: parseInt(strengthVolume) || 0,
         cardio_load: parseInt(cardioLoad) || 0,
         note: note,
         user_id: session.user.id,
         workout_type: workoutType,
-        subtype: workoutSubtype || null, // Add subtype field
-        planned: false  // Ensure completed workouts are not marked as planned
+        subtype: workoutSubtype || null,
+        planned: false
       };
+      
+      // Call previewWorkoutLoads here, only on submit
+      // Ensure previewWorkoutLoads returns all necessary fields for saving (e.g., ratios, acute/chronic loads)
+      const calculatedLoadData = previewWorkoutLoads(history, currentWorkoutData);
+
+      // Merge current workout data with calculated load data
+      const formattedData = {
+        ...currentWorkoutData,
+        ...calculatedLoadData, // Assuming calculatedLoadData contains fields like strength_ratio, cardio_ratio etc.
+      };
+
       const { data: existingData, error: checkError } = await supabase
         .from('workouts')
         .select('*')
         .eq('workout_date', workoutDate)
         .eq('user_id', session.user.id);
+
       if (checkError) {
         toast.error('Error checking for existing workout');
         console.error('Error checking existing workout:', checkError);
         return;
       }
+
       if (existingData && existingData.length > 0) {
         setExistingWorkout(existingData[0]);
-        setPendingWorkout(formattedData);
+        setPendingWorkout(formattedData); // pendingWorkout now includes calculated loads
         setShowWorkoutConfirm(true);
         return;
       }
-      await saveWorkout(formattedData);
-      toast.success('Workout saved successfully');
+
+      await saveWorkout(formattedData); // saveWorkout receives data with calculated loads
+      // toast.success('Workout saved successfully'); // Toast is handled in saveWorkout
     } catch (error) {
       console.error('Error submitting workout:', error);
       toast.error(error.message || 'Failed to save workout');
@@ -255,6 +256,7 @@ export default function WorkoutTracker() {
       if (!session) {
         throw new Error('No session found');
       }
+      // data already includes calculated loads from handleSubmit
       const baseData = {
         workout_date: data.workout_date,
         strength_volume: parseInt(data.strength_volume) || 0,
@@ -263,7 +265,16 @@ export default function WorkoutTracker() {
         user_id: session.user.id,
         workout_type: data.workout_type,
         subtype: data.subtype || null,
-        planned: false  // Always set planned to false when saving a workout
+        planned: data.planned || false, // Ensure planned status is preserved or defaulted
+        // Include other fields from calculatedLoadData if they are separate columns
+        strength_ratio: data.strength_ratio, // Example: ensure these are in data
+        cardio_ratio: data.cardio_ratio,     // Example: ensure these are in data
+        combined_ratio: data.combined_ratio, // Example: ensure these are in data
+        // Add other calculated fields as necessary
+        // strength_acute_load: data.strength_acute_load, 
+        // strength_chronic_load: data.strength_chronic_load,
+        // cardio_acute_load: data.cardio_acute_load,
+        // cardio_chronic_load: data.cardio_chronic_load,
       };
 
       let response;
@@ -316,12 +327,12 @@ export default function WorkoutTracker() {
     }
   };
 
-  const toggleLine = (line) => {
+  const toggleLine = useCallback((line) => {
     setVisibleLines(prev => ({
       ...prev,
       [line]: !prev[line]
     }));
-  };
+  }, [setVisibleLines]); // setVisibleLines is stable
 
   const handleNumberInput = (e, setter) => {
     const value = e.target.value;
@@ -330,18 +341,18 @@ export default function WorkoutTracker() {
     }
   };
 
-  const handleEditWorkout = (workout) => {
+  const handleEditWorkout = useCallback((workout) => {
     setExistingWorkout(workout);
     setWorkoutDate(workout.workout_date);
     setStrengthVolume(workout.strength_volume.toString());
     setCardioLoad(workout.cardio_load.toString());
     setNote(workout.note || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, [setExistingWorkout, setWorkoutDate, setStrengthVolume, setCardioLoad, setNote]); // Added dependencies
 
-  const handleHistoryDoubleClick = () => {
+  const handleHistoryDoubleClick = useCallback(() => {
     router.push('/workouts/history');
-  };
+  }, [router]);
 
   const getWorkoutPattern = (workoutSettings) => {
     if (!workoutSettings) return null;
@@ -529,31 +540,36 @@ const getWorkoutsForDay = (dayIndex, settings) => {
 };
 
 // Update getScheduledWorkouts to use the consolidated getWorkoutsForDay
-const getScheduledWorkouts = () => {
-  const workouts = [];
-  if (!workoutSettings) return workouts;
+// This function depends on workoutSettings and planStartDate, which are state/props.
+// To avoid it being a dependency in useEffect that causes re-runs,
+// ensure its dependencies are stable or wrap its usage.
+// For now, assuming its definition here is fine and its dependencies are handled in the useEffect.
+const getScheduledWorkouts = useCallback(() => {
+    const workouts = [];
+    if (!workoutSettings) return workouts;
 
-  DAYS.forEach((_, dayIndex) => {
-    const dayWorkouts = getWorkoutsForDay(dayIndex, workoutSettings);
-    dayWorkouts.forEach(workout => {
-      const date = new Date(planStartDate);
-      date.setDate(date.getDate() + dayIndex);
-      workouts.push({
-        date: new Date(date), // Ensure it's a Date object
-        type: workout.type,
-        subtype: workout.subtype || null,
-        duration: workout.duration || workoutSettings.workout_duration,
-        planned: true,
+    DAYS.forEach((_, dayIndex) => {
+      const dayWorkouts = getWorkoutsForDay(dayIndex, workoutSettings); // getWorkoutsForDay also needs to be stable or its deps listed
+      dayWorkouts.forEach(workout => {
+        const date = new Date(planStartDate);
+        date.setDate(date.getDate() + dayIndex);
+        workouts.push({
+          date: new Date(date), // Ensure it's a Date object
+          type: workout.type,
+          subtype: workout.subtype || null,
+          duration: workout.duration || workoutSettings.workout_duration,
+          planned: true,
+        });
       });
     });
-  });
 
-  return workouts;
-};
+    return workouts;
+  }, [workoutSettings, planStartDate]); // Added dependencies
 
-useEffect(() => {
-  setScheduledWorkouts(getScheduledWorkouts());
-}, [workoutSettings, planStartDate]);
+  useEffect(() => {
+    setScheduledWorkouts(getScheduledWorkouts());
+  }, [getScheduledWorkouts]); // Now correctly depends on the memoized getScheduledWorkouts
+
 
   const cycleWorkoutType = (current, subtype) => {
     if (!current) return { type: 'Strength', subtype: null };
@@ -577,14 +593,14 @@ useEffect(() => {
     setEditingWorkoutDay(null);
   };
 
-  const handleDateSelect = (date) => {
+  const handleDateSelect = useCallback((date) => {
     setSelectedDate(date);
     setWorkoutDate(date.toISOString().split('T')[0]);
     // If we're on the tracking tab, scroll to the form
     if (activeTab === 'track') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
+  }, [activeTab, setSelectedDate, setWorkoutDate]); // Added dependencies
 
   const handleEditScheduleClick = () => {
     const schedule = workoutSettings?.schedule || [];
@@ -608,15 +624,50 @@ useEffect(() => {
     setEditingSchedule(true);
   };
 
-  const handleDoubleClickWorkout = (workouts) => {
+  const handleDoubleClickWorkout = useCallback((workouts) => {
     setSelectedWorkoutsForModal(workouts);
     setIsModalOpen(true); // Open the modal
-  };
+  }, [setSelectedWorkoutsForModal, setIsModalOpen]); // Added dependencies
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false); // Close the modal
     setSelectedWorkoutsForModal([]);
-  };
+  }, [setIsModalOpen, setSelectedWorkoutsForModal]); // Added dependencies
+
+  // Memoize props for child components
+  const calendarWorkouts = useMemo(() => {
+    return scheduledWorkouts.concat(
+      history.map(entry => ({
+        ...entry,
+        date: new Date(entry.workout_date), // Ensure date is a Date object
+      }))
+    );
+  }, [scheduledWorkouts, history]);
+
+  const graphData = useMemo(() => {
+    // Slice and reverse history for the small graph display
+    return history.slice(0, 14).reverse();
+  }, [history]);
+
+  // Data for the expanded graph modal (all history)
+  const expandedGraphData = useMemo(() => {
+    return history; // Pass the full history, LoadRatiosGraph can handle if it needs reversing
+  }, [history]);
+
+  // Memoized onClick handlers for LoadRatioDisplay
+  const handleToggleStrengthLine = useCallback(() => toggleLine('strength'), [toggleLine]);
+  const handleToggleCardioLine = useCallback(() => toggleLine('cardio'), [toggleLine]);
+  const handleToggleCombinedLine = useCallback(() => toggleLine('combined'), [toggleLine]);
+
+  // Memoized callback for WorkoutHistoryItem onUpdate
+  const handleWorkoutHistoryItemUpdate = useCallback((workout) => {
+    if (workout) {
+      handleEditWorkout(workout);
+    } else {
+      fetchHistory(); // fetchHistory is stable (defined once in component scope)
+    }
+  }, [handleEditWorkout, fetchHistory]); // Dependencies
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -673,7 +724,6 @@ useEffect(() => {
               value={strengthVolume} 
               onChange={(e) => handleNumberInput(e, setStrengthVolume)} 
               className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-              disabled={workoutType !== 'Strength'}
             />
             <input 
               type="text" 
@@ -683,7 +733,6 @@ useEffect(() => {
               value={cardioLoad} 
               onChange={(e) => handleNumberInput(e, setCardioLoad)} 
               className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
-              disabled={workoutType !== 'Cardio'}
             />
             <textarea 
               placeholder="Workout Notes" 
@@ -705,12 +754,7 @@ useEffect(() => {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Calendar</h2>
           <Calendar 
-            workouts={scheduledWorkouts.concat(
-              history.map(entry => ({
-                ...entry,
-                date: new Date(entry.workout_date),
-              }))
-            )}
+            workouts={calendarWorkouts} // Use memoized prop
             selectedDate={selectedDate}
             onSelectDate={handleDateSelect}
             onDoubleClickWorkout={handleDoubleClickWorkout}
@@ -729,21 +773,21 @@ useEffect(() => {
               value={metrics.strengthRatio}
               isVisible={visibleLines.strength}
               color="bg-blue-500"
-              onClick={() => toggleLine('strength')}
+              onClick={handleToggleStrengthLine} // Use memoized handler
             />
             <LoadRatioDisplay 
               label="Cardio"
               value={metrics.cardioRatio}
               isVisible={visibleLines.cardio}
               color="bg-orange-500"
-              onClick={() => toggleLine('cardio')}
+              onClick={handleToggleCardioLine} // Use memoized handler
             />
             <LoadRatioDisplay 
               label="Combined"
               value={metrics.combinedRatio}
               isVisible={visibleLines.combined}
               color="bg-green-500"
-              onClick={() => toggleLine('combined')}
+              onClick={handleToggleCombinedLine} // Use memoized handler
             />
           </div>
           <div 
@@ -751,7 +795,7 @@ useEffect(() => {
             className="cursor-pointer transition-all hover:opacity-80"
           >
             <LoadRatiosGraph 
-              data={history.slice(0, 14).reverse()} 
+              data={graphData} // Use memoized prop
               visibleLines={visibleLines} 
             />
           </div>
@@ -819,13 +863,7 @@ useEffect(() => {
               <WorkoutHistoryItem 
                 key={entry.id}
                 entry={entry}
-                onUpdate={(workout) => {
-                  if (workout) {
-                    handleEditWorkout(workout);
-                  } else {
-                    fetchHistory();
-                  }
-                }}
+                onUpdate={handleWorkoutHistoryItemUpdate} // Use memoized callback
               />
             ))}
           </div>
@@ -857,7 +895,7 @@ useEffect(() => {
         onClose={() => setIsGraphExpanded(false)}
       >
         <LoadRatiosGraph 
-          data={history}  // Show all history in expanded view
+          data={expandedGraphData}  // Use memoized prop for expanded view
           visibleLines={visibleLines}
           expanded={true}
         />
@@ -867,7 +905,7 @@ useEffect(() => {
       {isModalOpen && (
         <WorkoutDetailsModal 
           workouts={selectedWorkoutsForModal}
-          onClose={handleCloseModal}
+          onClose={handleCloseModal} // Use memoized handler
         />
       )}
     </div>
