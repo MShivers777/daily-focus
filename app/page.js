@@ -5,33 +5,48 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import AuthComponent from '../components/Auth';
 import ErrorMessage from '../components/ErrorMessage';
 import { getRandomVerse } from '../utils/bibleVerses';
+import { useTodaysMarriagePrompt } from '../hooks/useTodaysMarriagePrompt'; // Import the new hook
 
 export default function Home() {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [marriagePrompt, setMarriagePrompt] = useState('');
+  const [loadingSession, setLoadingSession] = useState(true); // Renamed for clarity
+  // const [marriagePrompt, setMarriagePrompt] = useState(''); // Handled by hook
   const [dailyQuote, setDailyQuote] = useState({ text: '', author: '' });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({}); // Keep for other potential errors
   const supabase = createClientComponentClient();
   const router = useRouter();
 
+  // Use the new hook for marriage prompt
+  const { 
+    promptData: marriagePromptData, 
+    isLoading: marriagePromptLoading, 
+    error: marriagePromptError,
+    // refetch: refetchMarriagePrompt // if manual refetch is needed
+  } = useTodaysMarriagePrompt();
+
   useEffect(() => {
     const fetchSession = async () => {
+      setLoadingSession(true); // Start loading
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('Error fetching session:', error);
-        setLoading(false);
+        setErrors(prev => ({...prev, session: 'Failed to load session.'}));
+        setLoadingSession(false);
         return;
       }
       setSession(session);
-      setLoading(false);
+      setLoadingSession(false); // Finish loading
     };
 
     fetchSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
+      if (!currentSession) { // User signed out
+        setUser(null);
+        // Reset other states if necessary
+      }
     });
 
     return () => {
@@ -41,11 +56,16 @@ export default function Home() {
 
   useEffect(() => {
     if (session) {
-      fetchUserName();
-      fetchMarriagePrompt(session);
-      fetchDailyQuote();
+      fetchUserName(); // fetchUserName can stay as is
+      // fetchMarriagePrompt(session); // This is now handled by the hook
+      fetchDailyQuote(); // fetchDailyQuote can stay as is
+    } else {
+      // Clear user-specific data if session is lost
+      setUser(null);
+      // setMarriagePrompt(''); // Handled by hook's state
+      setDailyQuote({ text: '', author: '' });
     }
-  }, [session]);
+  }, [session]); // Removed supabase.auth from dependencies as it's stable
 
   const fetchUserName = async () => {
     try {
@@ -66,89 +86,8 @@ export default function Home() {
     }
   };
 
-  const fetchMarriagePrompt = async (currentSession) => {
-    if (!currentSession) return;
-
-    try {
-      const today = new Date();
-      const dayOfWeek = today.getDay();
-      const weekOfMonth = Math.floor((today.getDate() - 1) / 7);
-      const weekNumberForTemplate = (weekOfMonth % 2) + 1;
-
-      const { data: scheduleData, error: scheduleError } = await supabase
-        .from('marriage_schedule_template')
-        .select('topic_id, marriage_topics(identifier, name)')
-        .eq('day_of_week', dayOfWeek)
-        .eq('week_number', weekNumberForTemplate)
-        .single();
-
-      if (scheduleError || !scheduleData) {
-        console.error('Home Page: Error fetching schedule or no schedule for today:', scheduleError);
-        setMarriagePrompt('No marriage focus scheduled for today.');
-        return;
-      }
-
-      const topicId = scheduleData.topic_id;
-
-      const { data: progress } = await supabase
-        .from('user_prompt_progress')
-        .select('last_prompt_number')
-        .eq('user_id', currentSession.user.id)
-        .eq('topic_id', topicId)
-        .single(); // Errors if no row, caught by outer try/catch
-
-      let lastPromptNum = progress?.last_prompt_number || 0;
-      let sequenceToFetch = lastPromptNum + 1;
-
-      let { data: promptData, error: fetchError } = await supabase
-        .from('marriage_prompts')
-        .select('content, sequence_number') // Ensure sequence_number is selected
-        .eq('topic_id', topicId)
-        .eq('sequence_number', sequenceToFetch)
-        .single();
-
-      if (!promptData || (fetchError && fetchError.code === 'PGRST116')) {
-        sequenceToFetch = 1; // Reset to fetch the first prompt
-        const { data: firstPromptData, error: firstFetchError } = await supabase
-          .from('marriage_prompts')
-          .select('content, sequence_number') // Ensure sequence_number is selected
-          .eq('topic_id', topicId)
-          .eq('sequence_number', sequenceToFetch)
-          .single();
-        
-        if (firstFetchError && firstFetchError.code !== 'PGRST116') {
-          console.error('Home Page: Error fetching first prompt for topic:', topicId, firstFetchError);
-        }
-        promptData = firstPromptData;
-      } else if (fetchError) {
-        console.error('Home Page: Error fetching prompt:', topicId, sequenceToFetch, fetchError);
-      }
-
-      if (promptData) {
-        await supabase
-          .from('user_prompt_progress')
-          .upsert({
-            user_id: currentSession.user.id,
-            topic_id: topicId,
-            last_prompt_number: promptData.sequence_number // Update with the displayed prompt's number
-          }, {
-            onConflict: 'user_id,topic_id' // Specify conflict columns
-          });
-        setMarriagePrompt(`${scheduleData.marriage_topics.name}: ${promptData.content}`);
-      } else {
-        setMarriagePrompt(`${scheduleData.marriage_topics.name}: No prompts available for this topic.`);
-      }
-    } catch (error) {
-      // Catch errors from .single() if no record, or other general errors
-      if (error.code === 'PGRST116') {
-         console.warn('Home Page: A fetch operation returned no data (PGRST116), prompt may be unavailable:', error.message);
-      } else {
-        console.error('Home Page: Error fetching marriage prompt:', error);
-      }
-      setMarriagePrompt('Unable to load today\'s marriage focus.');
-      setErrors(prev => ({...prev, marriagePrompt: 'Could not load marriage prompt.'}));
-    }
-  };
+  // Remove fetchMarriagePrompt function entirely, it's replaced by the hook.
+  // const fetchMarriagePrompt = async (currentSession) => { ... }
 
   const fetchDailyQuote = async () => {
     try {
@@ -166,7 +105,7 @@ export default function Home() {
     }
   };
 
-  if (loading) {
+  if (loadingSession) { // Check session loading state
     return <div>Loading...</div>;
   }
 
@@ -227,12 +166,14 @@ export default function Home() {
           {/* Marriage Focus Card */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-blue-100 dark:border-blue-900/30">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Daily Marriage Focus</h2>
-            {errors.marriagePrompt ? (
-              <ErrorMessage message={errors.marriagePrompt} />
+            {marriagePromptError ? (
+              <ErrorMessage message={marriagePromptError} />
+            ) : marriagePromptLoading ? (
+              <p className="text-gray-700 dark:text-gray-300 italic">Loading marriage focus...</p>
             ) : (
               <div className="space-y-6">
                 <p className="text-gray-700 dark:text-gray-300 italic bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                  {marriagePrompt || 'Loading...'}
+                  {marriagePromptData.topic ? `${marriagePromptData.topic}: ` : ''}{marriagePromptData.content || 'No prompt available.'}
                 </p>
                 
                 <div className="border-t dark:border-gray-700 pt-4">
